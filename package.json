@@ -1,0 +1,24 @@
+{
+  "name": "summarygram",
+  "version": "0.1.0",
+  "description": "A telegram bot to summarize last N messages",
+  "main": "index.js",
+  "scripts": {
+    "compile": "tsc",
+    "start": "node ./out"
+  },
+  "author": "derogab",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "1.7.2",
+    "cron": "3.1.7",
+    "dotenv": "16.4.5",
+    "grammy": "1.27.0",
+    "ollama": "0.5.0",
+    "openai": "4.31.0",
+    "redis": "4.6.13"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.3"
+  }
+}

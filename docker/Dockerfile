@@ -10,6 +10,6 @@ RUN npm install
 # Copy app
 COPY . .
 # Build
-RUN npm run build
+RUN npm run compile
 # Run command 
 CMD ["npm", "run", "start"]

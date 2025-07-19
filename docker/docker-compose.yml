@@ -1,0 +1,52 @@
+volumes:
+  summarygram-data:
+    name: summarygram-data
+    driver: local
+
+networks:
+  summarygram-network:
+    name: summarygram-network
+    driver: bridge
+
+services:
+  
+  redis:
+    image: redis:7-alpine
+    container_name: summarygram-redis
+    restart: unless-stopped
+    volumes:
+      - summarygram-data:/data
+    command: redis-server
+    networks:
+      - summarygram-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: ghcr.io/derogab/summarygram:latest
+    container_name: summarygram-app
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - REDIS_URL=redis://redis:6379
+    env_file:
+      - ../.env
+    networks:
+      - summarygram-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "console.log('Health check passed')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+

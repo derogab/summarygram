@@ -22,7 +22,19 @@ export default class Storage {
   async connect() {
     if (this.client) return; // If the client is already connected, return.
     
-    const client = await createClient()
+    const client = await createClient({
+      url: process.env.REDIS_URL || 'redis://localhost:6379',
+      socket: {
+        reconnectStrategy: (retries) => {
+          if (retries > 10) {
+            console.error('Redis connection failed after 10 retries');
+            return false;
+          }
+          console.log(`Redis connection retry ${retries}/10`);
+          return Math.min(retries * 100, 3000);
+        }
+      }
+    })
     .on('error', err => console.log('Redis Client Error', err))
     .connect();
 

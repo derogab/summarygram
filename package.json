@@ -10,14 +10,15 @@
   "author": "derogab",
   "license": "MIT",
   "dependencies": {
-    "axios": "1.7.2",
-    "dotenv": "16.4.5",
-    "grammy": "1.27.0",
-    "ollama": "0.5.0",
-    "openai": "4.31.0",
-    "redis": "4.6.13"
+    "axios": "1.10.0",
+    "dotenv": "17.2.0",
+    "grammy": "1.37.0",
+    "ollama": "0.5.16",
+    "openai": "5.10.1",
+    "redis": "5.6.0"
   },
   "devDependencies": {
-    "typescript": "^5.5.3"
+    "@types/node": "^24.0.15",
+    "typescript": "^5.8.3"
   }
 }

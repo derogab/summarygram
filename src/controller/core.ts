@@ -19,8 +19,6 @@ function generate_key(chatId: string | number) {
  * @param ctx the context of the telegram message.
  */
 export async function onMessageReceived(storage: Storage, ctx: Context) {
-  console.log(ctx.message?.from?.username, ctx.message?.text);
-
   // Get the message from the context and extract info.
   const message = ctx.update.message;
   const text = message?.text;

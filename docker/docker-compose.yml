@@ -1,3 +1,5 @@
+name: summarygram
+
 volumes:
   summarygram-data:
     name: summarygram-data

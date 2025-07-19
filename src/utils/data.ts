@@ -1,9 +1,6 @@
 // Dependencies.
 import { createClient, RedisClientType } from 'redis';
 
-// Types.
-import type { MessageInputParam } from './llm';
-
 // Class for the data storage.
 export default class Storage {
   // The client for the Redis database.
@@ -63,20 +60,17 @@ export default class Storage {
  * 
  * @param storage storage instance.
  * @param key the key to update the history.
+ * @param username the username of the user who sent the message.
  * @param message the message to update the history with.
  */
-export async function updateHistory(storage: Storage, key: string, message: MessageInputParam | MessageInputParam[]) {
+export async function updateHistory(storage: Storage, key: string, username: string, message: string) {
   // Connect storage if not connected.
   await storage.connect();
-  // If the message is an array, iterate over each message and update the history.
-  if (Array.isArray(message)) for (const msg of message) await updateHistory(storage, key, msg);
-  else { // If the message is a single message, update the history with the message.
-    
-    await storage.client?.multi()
-      .rPush(key, message.role + '###' + message.content)
-      .expire(key, 60 * 60 * 24 * 3) // Expire in 3 days.
-      .exec();
-  }
+  // Update the history.
+  await storage.client?.multi()
+    .rPush(key, username + '###' + message)
+    .expire(key, 60 * 60 * 8) // Expire in 8 hours.
+    .exec();
 }
 
 /**
@@ -84,17 +78,17 @@ export async function updateHistory(storage: Storage, key: string, message: Mess
  * 
  * @param storage storage instance.
  * @param key the key to get the history.
- * @returns the history messages of the key.
+ * @returns the history messages and authors.
  */
-export async function getHistory(storage: Storage, key: string): Promise<MessageInputParam[]> {
+export async function getHistory(storage: Storage, key: string): Promise<{ username: string, message: string }[]> {
   // Connect storage if not connected.
   await storage.connect();
   // Retrieve the history.
   const history = await storage.client?.lRange(key, 0, -1) || [];
-  // Generate the history messages.
+  // Generate the history messages and authors.
   return history.map(msg => {
-    const [role, content] = msg.split('###');
-    return { role, content };
+    const [username, message] = msg.split('###');
+    return { username, message };
   });
 }
 

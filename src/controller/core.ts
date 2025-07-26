@@ -21,8 +21,8 @@ function generate_key(chatId: string | number) {
 export async function onMessageReceived(storage: Storage, ctx: Context) {
   // Get the message from the context and extract info.
   const message = ctx.update.message;
-  const text = message?.text;
-  const chatId = message?.chat.id ? ''+message?.chat.id : undefined;
+  let text = message?.text;
+  const chatId = message?.chat?.id ? ''+message?.chat?.id : undefined;
   const fromId = message?.from?.id ? ''+message?.from?.id : undefined;
   const fromUsername = message?.from?.username ? ''+message?.from?.username : undefined;
   const from = fromUsername || fromId;
@@ -32,7 +32,15 @@ export async function onMessageReceived(storage: Storage, ctx: Context) {
   // Check if from is not available.
   if (!from) throw new Error('No Message Author found.');
   // Check if text is not available.
-  if (!text) throw new Error('No Message found.');
+  if (!text) {
+    if (message?.caption) {
+      text = message?.caption;
+    } else if (message?.document?.file_name) {
+      text = message?.document?.file_name;
+    } else {
+      return;
+    }
+  }
   // Generate key.
   const key = generate_key(chatId);
 

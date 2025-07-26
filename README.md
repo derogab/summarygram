@@ -96,5 +96,4 @@ If you like this project or directly benefit from it, please consider buying me 
 💶 [Sponsor on GitHub](https://github.com/sponsors/derogab)
 
 ### Stargazers over time
-
-[![Stargazers over time](https://starchart.cc/derogab/summarygram.svg)](https://starchart.cc/derogab/summarygram)
+[![Stargazers over time](https://starchart.cc/derogab/summarygram.svg?variant=adaptive)](https://starchart.cc/derogab/summarygram)

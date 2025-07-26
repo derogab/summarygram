@@ -32,6 +32,54 @@
 | `CLOUDFLARE_MODEL` | Cloudflare model name (optional, for Cloudflare AI) | - |
 | `REDIS_URL` | URL for the Redis server (optional) | redis://localhost:6379 |
 
+### Setup
+
+#### 1. Create Telegram Bot
+1. Open Telegram and search for [@BotFather](https://t.me/botfather).
+2. Send `/newbot` command and follow the instructions.
+3. Choose a name and username for your bot.
+4. Save the bot token provided by BotFather.
+
+#### 2. Configure Bot Privacy
+1. Send `/setprivacy` to [@BotFather](https://t.me/botfather).
+2. Select your bot from the list.
+3. Choose "Disable" to allow the bot to read group messages.
+4. This is required for the bot to access and summarize group messages.
+
+#### 3. Configure Environment
+1. **For OpenAI**: Get your API key from [OpenAI Platform](https://platform.openai.com/api-keys).
+2. **For Ollama**: No API key needed, just ensure Ollama is running locally.
+3. **For Cloudflare AI**: Get your account ID and auth key from [Cloudflare Dashboard](https://dash.cloudflare.com/profile/api-tokens).
+4. Create a `.env` file in the project root with your configuration:
+   ```env
+   TELEGRAM_BOT_TOKEN=your_bot_token_here
+   OPENAI_API_KEY=your_openai_key_here
+   # Add other variables as needed
+   ```
+
+### Deployment
+
+#### Start the Bot
+```bash
+docker compose -f docker/docker-compose.yml up -d
+```
+
+#### Stop the Bot
+```bash
+docker compose -f docker/docker-compose.yml down
+```
+
+### Usage
+
+#### 1. Add the Bot to a Group
+1. Add your bot to any Telegram group where you want to use it.
+2. The bot will automatically start monitoring messages in the group.
+3. If you want to restrict the bot to specific groups, add the group IDs to the `WHITELISTED_CHATS` environment variable, separated by commas, and restart the bot.
+
+#### 2. Use Summary Command
+- Send `/summary` in the group chat.
+- The bot will analyze all available messages in the chat and provide a concise summary. The message history is automatically cleared after 8 hours of inactivity.
+
 ### Credits
 _SummaryGram_ is made with ♥ by [derogab](https://github.com/derogab) and it's released under the [MIT license](./LICENSE).
 

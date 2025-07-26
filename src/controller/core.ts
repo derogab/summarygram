@@ -29,6 +29,8 @@ export async function onMessageReceived(storage: Storage, ctx: Context) {
 
   // Check if chatId is not available.
   if (!chatId) throw new Error('No Chat found.');
+  // Check if the chat is whitelisted.
+  if (process.env.WHITELISTED_CHATS && !process.env.WHITELISTED_CHATS?.split(',').includes(chatId)) return;
   // Check if from is not available.
   if (!from) throw new Error('No Message Author found.');
   // Check if text is not available.

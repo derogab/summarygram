@@ -1,6 +1,6 @@
 {
   "name": "summarygram",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A telegram bot to summarize last N messages",
   "main": "index.js",
   "scripts": {

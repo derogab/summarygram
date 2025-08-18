@@ -14,11 +14,11 @@
     "dotenv": "17.2.1",
     "grammy": "1.37.0",
     "ollama": "0.5.16",
-    "openai": "5.10.2",
+    "openai": "5.11.0",
     "redis": "5.7.0"
   },
   "devDependencies": {
     "@types/node": "^24.1.0",
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.2"
   }
 }

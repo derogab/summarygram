@@ -70,5 +70,24 @@ export async function onMessageReceived(storage: Storage, ctx: Context) {
   } else {
     // Save message.
     await dataUtils.updateHistory(storage, key, from, text);
+    // Check if the message is too long.
+    if (text.length > Number(process.env.MSG_LENGTH_LIMIT ?? 1000)) {
+      // Generate a smart summary for the message.
+      const m = await generate([
+        // Instructions for the AI.
+        { role: 'system', content: "You are an helpful assistant." },
+        { role: 'system', content: "Your only task is to summarize a text." },
+        { role: 'system', content: "You will receive the text and you will have to return only a very short and concise summary of that text." },
+        { role: 'system', content: "Use the same language used in the text. Reply in simple text WITHOUT any special formatting characters (DO NOT use ** or _ please)." },
+        { role: 'system', content: "Use smart spacing so that the text will be easy to read." },
+        // Message.
+        { role: 'user', content: 'Text:\n\n' + text },
+      ]);
+
+      // Send the summarized text.
+      await ctx.reply('TL;DR\n\n' + (m.content as string), {
+        reply_to_message_id: message?.message_id
+      });
+    }
   }
 }

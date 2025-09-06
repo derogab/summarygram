@@ -13,7 +13,7 @@
     "@derogab/llm-proxy": "0.2.0",
     "dotenv": "17.2.1",
     "grammy": "1.38.1",
-    "redis": "5.7.0"
+    "redis": "5.8.2"
   },
   "devDependencies": {
     "@types/node": "^24.1.0",

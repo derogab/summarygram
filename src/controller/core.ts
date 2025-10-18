@@ -1,15 +1,31 @@
-import { Context } from "grammy";
+import { Bot, Context } from "grammy";
 import { generate } from '@derogab/llm-proxy';
 import Storage, * as dataUtils from "../utils/data";
 
 /**
- * Generate a key from a chat id.
+ * Generate a summary of the chat history.
  * 
- * @param chatId the chat id.
- * @returns the generated key.
+ * @param storage the storage instance.
+ * @param key the key of the chat to generate the summary.
+ * @returns the summary.
  */
-function generate_key(chatId: string | number) {
-  return `chat:${chatId}`;
+async function generate_summary(storage: Storage, key: string) {
+  // Get history.
+  const history = await dataUtils.getHistory(storage, key);
+
+  // Generate a smart reply using the AI based on instructions and chat history.
+  const m = await generate([
+    // Instructions for the AI.
+    { role: 'system', content: "You are an helpful assistant." },
+    { role: 'system', content: "Your only task is to summarize a lot of messages written by different authors." },
+    { role: 'system', content: "You will receive all messages of a chat and you will have to return a summary of the all conversation." },
+    { role: 'system', content: "Use the same language used by the other people. Reply in simple text WITHOUT any special formatting characters (DO NOT use ** or _ please)." },
+    // Chat history.
+    ...history.map(x => ({ role: 'user', content: '@' + x.username + ': ' + x.message }))
+  ]);
+
+  // Return the summary.
+  return m.content as string;
 }
 
 /**
@@ -44,28 +60,16 @@ export async function onMessageReceived(storage: Storage, ctx: Context) {
     }
   }
   // Generate key.
-  const key = generate_key(chatId);
+  const key = dataUtils.generateKeyChat(chatId);
 
   // Check if the message is a special word to execute the summary.
   if (text?.startsWith('/summary')) {
     // Set the bot as typing.
     await ctx.api.sendChatAction(chatId, 'typing').catch(() => {});
-    // Get history.
-    const history = await dataUtils.getHistory(storage, key);
-
-    // Generate a smart reply using the AI based on instructions and chat history.
-    const m = await generate([
-      // Instructions for the AI.
-      { role: 'system', content: "You are an helpful assistant." },
-      { role: 'system', content: "Your only task is to summarize a lot of messages written by different authors." },
-      { role: 'system', content: "You will receive all messages of a chat and you will have to return a summary of the all conversation." },
-      { role: 'system', content: "Use the same language used by the other people. Reply in simple text WITHOUT any special formatting characters (DO NOT use ** or _ please)." },
-      // Chat history.
-      ...history.map(x => ({ role: 'user', content: '@' + x.username + ': ' + x.message }))
-    ]);
-
+    // Generate the summary.
+    const summary = await generate_summary(storage, key);
     // Send the message.
-    await ctx.reply(m.content as string);
+    await ctx.reply(summary);
 
   } else {
     // Save message.
@@ -89,5 +93,28 @@ export async function onMessageReceived(storage: Storage, ctx: Context) {
         reply_to_message_id: message?.message_id
       });
     }
+  }
+}
+
+/**
+ * Function to be called when a cron job is triggered.
+ * 
+ * @param storage the storage instance.
+ * @param bot the bot instance.
+ */
+export async function onCronJob(storage: Storage, bot: Bot) {
+  // Get all active chats.
+  const chatIds = await dataUtils.getActiveChats(storage);
+  // For each chat, generate a summary.
+  for (const chatId of chatIds) {
+    // Check if the chat has history.
+    const history = await dataUtils.getHistory(storage, dataUtils.generateKeyChat(chatId));
+    if (history.length === 0) continue;
+    // Set the bot as typing.
+    await bot.api.sendChatAction(chatId, 'typing').catch(() => {});
+    // Generate the summary.
+    const summary = await generate_summary(storage, dataUtils.generateKeyChat(chatId));
+    // Send the message.
+    await bot.api.sendMessage(chatId, summary);
   }
 }

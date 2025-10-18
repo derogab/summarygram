@@ -107,6 +107,9 @@ export async function onCronJob(storage: Storage, bot: Bot) {
   const chatIds = await dataUtils.getActiveChats(storage);
   // For each chat, generate a summary.
   for (const chatId of chatIds) {
+    // Check if the chat has history.
+    const history = await dataUtils.getHistory(storage, dataUtils.generateKeyChat(chatId));
+    if (history.length === 0) continue;
     // Generate the summary.
     const summary = await generate_summary(storage, dataUtils.generateKeyChat(chatId));
     // Send the message.

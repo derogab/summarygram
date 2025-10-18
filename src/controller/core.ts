@@ -13,6 +13,32 @@ function generate_key(chatId: string | number) {
 }
 
 /**
+ * Generate a summary of the chat history.
+ * 
+ * @param storage the storage instance.
+ * @param key the key of the chat to generate the summary.
+ * @returns the summary.
+ */
+async function generate_summary(storage: Storage, key: string) {
+  // Get history.
+  const history = await dataUtils.getHistory(storage, key);
+
+  // Generate a smart reply using the AI based on instructions and chat history.
+  const m = await generate([
+    // Instructions for the AI.
+    { role: 'system', content: "You are an helpful assistant." },
+    { role: 'system', content: "Your only task is to summarize a lot of messages written by different authors." },
+    { role: 'system', content: "You will receive all messages of a chat and you will have to return a summary of the all conversation." },
+    { role: 'system', content: "Use the same language used by the other people. Reply in simple text WITHOUT any special formatting characters (DO NOT use ** or _ please)." },
+    // Chat history.
+    ...history.map(x => ({ role: 'user', content: '@' + x.username + ': ' + x.message }))
+  ]);
+
+  // Return the summary.
+  return m.content as string;
+}
+
+/**
  * Function to be called when a message is received.
  * 
  * @param storage the storage instance.
@@ -50,22 +76,10 @@ export async function onMessageReceived(storage: Storage, ctx: Context) {
   if (text?.startsWith('/summary')) {
     // Set the bot as typing.
     await ctx.api.sendChatAction(chatId, 'typing').catch(() => {});
-    // Get history.
-    const history = await dataUtils.getHistory(storage, key);
-
-    // Generate a smart reply using the AI based on instructions and chat history.
-    const m = await generate([
-      // Instructions for the AI.
-      { role: 'system', content: "You are an helpful assistant." },
-      { role: 'system', content: "Your only task is to summarize a lot of messages written by different authors." },
-      { role: 'system', content: "You will receive all messages of a chat and you will have to return a summary of the all conversation." },
-      { role: 'system', content: "Use the same language used by the other people. Reply in simple text WITHOUT any special formatting characters (DO NOT use ** or _ please)." },
-      // Chat history.
-      ...history.map(x => ({ role: 'user', content: '@' + x.username + ': ' + x.message }))
-    ]);
-
+    // Generate the summary.
+    const summary = await generate_summary(storage, key);
     // Send the message.
-    await ctx.reply(m.content as string);
+    await ctx.reply(summary);
 
   } else {
     // Save message.

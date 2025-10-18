@@ -1,16 +1,6 @@
-import { Context } from "grammy";
+import { Bot, Context } from "grammy";
 import { generate } from '@derogab/llm-proxy';
 import Storage, * as dataUtils from "../utils/data";
-
-/**
- * Generate a key from a chat id.
- * 
- * @param chatId the chat id.
- * @returns the generated key.
- */
-function generate_key(chatId: string | number) {
-  return `chat:${chatId}`;
-}
 
 /**
  * Generate a summary of the chat history.
@@ -70,7 +60,7 @@ export async function onMessageReceived(storage: Storage, ctx: Context) {
     }
   }
   // Generate key.
-  const key = generate_key(chatId);
+  const key = dataUtils.generateKeyChat(chatId);
 
   // Check if the message is a special word to execute the summary.
   if (text?.startsWith('/summary')) {
@@ -103,5 +93,23 @@ export async function onMessageReceived(storage: Storage, ctx: Context) {
         reply_to_message_id: message?.message_id
       });
     }
+  }
+}
+
+/**
+ * Function to be called when a cron job is triggered.
+ * 
+ * @param storage the storage instance.
+ * @param bot the bot instance.
+ */
+export async function onCronJob(storage: Storage, bot: Bot) {
+  // Get all active chats.
+  const chatIds = await dataUtils.getActiveChats(storage);
+  // For each chat, generate a summary.
+  for (const chatId of chatIds) {
+    // Generate the summary.
+    const summary = await generate_summary(storage, dataUtils.generateKeyChat(chatId));
+    // Send the message.
+    await bot.api.sendMessage(chatId, summary);
   }
 }

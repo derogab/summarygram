@@ -1,6 +1,9 @@
 // Dependencies.
 import { createClient, RedisClientType } from 'redis';
 
+// Constants.
+const KEY_PREFIX_CHAT = 'chat:';
+
 // Class for the data storage.
 export default class Storage {
   // The client for the Redis database.
@@ -56,6 +59,16 @@ export default class Storage {
 }
 
 /**
+ * Generate a key from a chat id.
+ * 
+ * @param chatId the id of the chat.
+ * @returns the generated key for the chat.
+ */
+export function generateKeyChat(chatId: string | number) : string {
+  return KEY_PREFIX_CHAT + chatId;
+}
+
+/**
  * Update history in the storage.
  * 
  * @param storage storage instance.
@@ -90,4 +103,19 @@ export async function getHistory(storage: Storage, key: string): Promise<{ usern
     const [username, message] = msg.split('###');
     return { username, message };
   });
+}
+
+/**
+ * Get all active chats from the storage.
+ * 
+ * @param storage the storage instance.
+ * @returns the active chats.
+ */
+export async function getActiveChats(storage: Storage): Promise<string[]> {
+  // Connect storage if not connected.
+  await storage.connect();
+  // Retrieve the active chats from stored keys with the prefix.
+  const chats = await storage.client?.keys(KEY_PREFIX_CHAT + '*') || [];
+  // Return the active chats (keys without the prefix).
+  return chats.map(key => key.replace(KEY_PREFIX_CHAT, '')); // Remove the prefix from the key.
 }

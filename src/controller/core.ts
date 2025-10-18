@@ -110,6 +110,8 @@ export async function onCronJob(storage: Storage, bot: Bot) {
     // Check if the chat has history.
     const history = await dataUtils.getHistory(storage, dataUtils.generateKeyChat(chatId));
     if (history.length === 0) continue;
+    // Set the bot as typing.
+    await bot.api.sendChatAction(chatId, 'typing').catch(() => {});
     // Generate the summary.
     const summary = await generate_summary(storage, dataUtils.generateKeyChat(chatId));
     // Send the message.

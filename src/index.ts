@@ -19,10 +19,11 @@ const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN ?? '');
 bot.on('message', async (ctx) => onMessageReceived(storage, ctx));
 
 // Add cron job listener(s).
-cron.schedule('59 23 * * *', () => onCronJob(storage, bot));
+const cronSchedule = process.env.CRON_SCHEDULE || '59 23 * * *';
+if (cronSchedule !== 'never') cron.schedule(cronSchedule, () => onCronJob(storage, bot));
 
 // Start bot.
-bot.start({ allowed_updates: ["message"] })
+bot.start({ allowed_updates: ["message"] });
 
 // Enable graceful stop.
 process.once('SIGINT', () => { bot.stop(); });

@@ -30,6 +30,7 @@
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID (optional, for Cloudflare AI) | - |
 | `CLOUDFLARE_AUTH_KEY` | Cloudflare authorization key (optional, for Cloudflare AI) | - |
 | `CLOUDFLARE_MODEL` | Cloudflare model name (optional, for Cloudflare AI) | - |
+| `CRON_SCHEDULE` | Cron schedule for automatic summaries (optional). Set to `never` to disable. | 59 23 * * * |
 | `REDIS_URL` | URL for the Redis server (optional) | redis://localhost:6379 |
 | `MSG_LENGTH_LIMIT` | Minimum message length to trigger automatic summarization | 1000 |
 

@@ -35,6 +35,8 @@ services:
     image: ghcr.io/derogab/summarygram:latest
     container_name: summarygram-app
     restart: unless-stopped
+    volumes:
+      - ../models:/usr/src/app/models
     depends_on:
       redis:
         condition: service_healthy

@@ -23,8 +23,32 @@ env:
 
 jobs:
 
+  # Run tests.
+  test:
+
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
   # Try to build image.
   build:
+
+    # Ensure test job passes before building image.
+    needs: test
 
     name: Test Image Build
     runs-on: ubuntu-latest

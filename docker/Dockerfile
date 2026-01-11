@@ -48,10 +48,9 @@ COPY --from=builder /usr/src/app/node_modules/@node-llama-cpp ./node_modules/@no
 # Clean up unnecessary files to reduce image size:
 # - Remove non-Linux platform binaries (mac, win)
 # - Remove typescript (peer optional, not needed at runtime)
-# - Remove source files and local build artifacts from node-llama-cpp
+# - Remove source files from node-llama-cpp (keep llama/ for runtime metadata)
 RUN find node_modules/@node-llama-cpp -maxdepth 1 -type d \( -name "mac-*" -o -name "win-*" \) -exec rm -rf {} + 2>/dev/null || true && \
     rm -rf node_modules/typescript && \
-    rm -rf node_modules/node-llama-cpp/llama && \
     rm -rf node_modules/node-llama-cpp/src && \
     rm -rf node_modules/node-llama-cpp/*.md && \
     rm -rf node_modules/node-llama-cpp/tsconfig*.json

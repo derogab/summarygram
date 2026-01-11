@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-SummaryGram is a Telegram bot that summarizes group chat messages using AI. It supports multiple LLM backends (OpenAI, Ollama, Cloudflare AI) via the `@derogab/llm-proxy` library.
+SummaryGram is a Telegram bot that summarizes group chat messages using AI. It supports multiple LLM backends (OpenAI, Ollama, Cloudflare AI, llama.cpp) via the `@derogab/llm-proxy` library.
 
 ## Build and Run Commands
 
@@ -38,7 +38,7 @@ The bot has a simple structure in `src/`:
 ## Key Dependencies
 
 - **grammY**: Telegram bot framework
-- **@derogab/llm-proxy**: Unified interface for multiple LLM providers (OpenAI, Ollama, Cloudflare)
+- **@derogab/llm-proxy**: Unified interface for multiple LLM providers (OpenAI, Ollama, Cloudflare, llama.cpp)
 - **node-cron**: Scheduled summary jobs
 - **redis**: Message history persistence
 
@@ -48,4 +48,4 @@ All configuration via environment variables (see README.md for full list). Key o
 - `TELEGRAM_BOT_TOKEN` (required)
 - `WHITELISTED_CHATS`: Comma-separated chat IDs for access control
 - `CRON_SCHEDULE`: When to send auto-summaries (default: `59 23 * * *`), set to `never` to disable
-- LLM provider configs: `OPENAI_API_KEY`, `OLLAMA_URI`/`OLLAMA_MODEL`, or Cloudflare credentials
+- LLM provider configs: `OPENAI_API_KEY`, `OLLAMA_URI`/`OLLAMA_MODEL`, Cloudflare credentials, or `LLAMA_CPP_MODEL_PATH` for local inference

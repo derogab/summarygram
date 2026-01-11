@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "compile": "tsc",
-    "start": "node ./out"
+    "start": "node ./out",
+    "test": "vitest run"
   },
   "author": "derogab",
   "license": "MIT",
@@ -18,6 +19,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.0.3",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.16"
   }
 }

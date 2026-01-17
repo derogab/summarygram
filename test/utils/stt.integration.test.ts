@@ -61,6 +61,7 @@ async function downloadFile(url: string, destPath: string): Promise<void> {
  *
  * Prerequisites:
  * - ffmpeg must be installed for audio conversion
+ * - smart-whisper native module must be built
  *
  * The model will be automatically downloaded to models/ folder.
  */

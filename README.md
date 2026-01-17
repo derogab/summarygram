@@ -16,6 +16,7 @@
 - 📝 Summarize recent messages in group chats
 - 🧠 AI-powered summarization
 - 🔌 Customizable LLM integration (OpenAI, [Ollama](https://github.com/ollama/ollama), Cloudflare AI, [llama.cpp](https://github.com/ggml-org/llama.cpp))
+- 🎤 Voice message transcription using [whisper.cpp](https://github.com/ggerganov/whisper.cpp)
 - 🐳 Docker containerized for easy deployment
 
 ### Environment Variables
@@ -31,6 +32,7 @@
 | `CLOUDFLARE_AUTH_KEY` | Cloudflare authorization key (optional, for Cloudflare AI) | - |
 | `CLOUDFLARE_MODEL` | Cloudflare model name (optional, for Cloudflare AI) | - |
 | `LLAMA_CPP_MODEL_PATH` | Path to your GGUF model file (optional, for local llama.cpp inference) | - |
+| `WHISPER_CPP_MODEL_PATH` | Path to your Whisper GGML model file (optional, for voice transcription) | - |
 | `CRON_SCHEDULE` | Cron schedule for automatic summaries, in [cron syntax](https://nodecron.com/cron-syntax.html) (optional). Set to `never` to disable. | 59 23 * * * |
 | `REDIS_URL` | URL for the Redis server (optional) | redis://localhost:6379 |
 | `MSG_LENGTH_LIMIT` | Minimum message length to trigger automatic summarization | 1000 |
@@ -54,10 +56,13 @@
 2. **For Ollama**: No API key needed, just ensure Ollama is running locally.
 3. **For Cloudflare AI**: Get your account ID and auth key from [Cloudflare Dashboard](https://dash.cloudflare.com/profile/api-tokens).
 4. **For llama.cpp**: Download a GGUF model file (e.g., from [Hugging Face](https://huggingface.co/models?sort=trending&search=gguf)) and set the path to it. This enables fully local inference without external API calls.
-5. Create a `.env` file in the project root with your configuration:
+5. **For Whisper (voice transcription)**: Download a Whisper GGML model from [whisper.cpp models](https://huggingface.co/ggerganov/whisper.cpp/tree/main) and set the path. Available models: `ggml-tiny.bin`, `ggml-base.bin`, `ggml-small.bin`, `ggml-medium.bin`, `ggml-large-v3.bin`. Larger models are more accurate but require more memory (large-v3 needs ~4GB RAM).
+6. Create a `.env` file in the project root with your configuration:
    ```env
    TELEGRAM_BOT_TOKEN=your_bot_token_here
    OPENAI_API_KEY=your_openai_key_here
+   # Optional: enable voice transcription
+   WHISPER_CPP_MODEL_PATH=/path/to/models/ggml-base.bin
    # Add other variables as needed
    ```
 

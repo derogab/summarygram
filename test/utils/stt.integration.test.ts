@@ -3,8 +3,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as https from 'https';
 
-// Model and audio file paths
-const MODELS_DIR = path.join('/tmp', 'whisper-test-models');
+// Model and audio file paths (relative to project root)
+const PROJECT_ROOT = path.resolve(__dirname, '../..');
+const MODELS_DIR = path.join(PROJECT_ROOT, 'models');
 const MODEL_URL = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin';
 const MODEL_PATH = path.join(MODELS_DIR, 'ggml-base.en.bin');
 
@@ -61,7 +62,7 @@ async function downloadFile(url: string, destPath: string): Promise<void> {
  * Prerequisites:
  * - ffmpeg must be installed for audio conversion
  *
- * The model will be automatically downloaded to /tmp/whisper-test-models/
+ * The model will be automatically downloaded to models/ folder.
  */
 describe('stt integration tests', () => {
   let transcribeAudio: typeof import('../../src/utils/stt').transcribeAudio;

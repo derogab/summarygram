@@ -41,6 +41,12 @@ COPY package*.json ./
 # Install only production dependencies (skip scripts since binaries will be copied)
 RUN npm ci --omit=dev --ignore-scripts
 
+# Explicitly build smart-whisper native module
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    python3 \
+    && npm rebuild smart-whisper
+
 # Copy prebuilt llama.cpp binaries from builder
 COPY --from=builder /usr/src/app/node_modules/node-llama-cpp ./node_modules/node-llama-cpp
 COPY --from=builder /usr/src/app/node_modules/@node-llama-cpp ./node_modules/@node-llama-cpp
@@ -62,6 +68,9 @@ FROM node:lts-slim AS production
 
 # Create app directory
 WORKDIR /usr/src/app
+
+# Install dependencies
+RUN apt-get update && apt-get install -y ffmpeg
 
 # Copy compiled output
 COPY --from=builder /usr/src/app/out ./out

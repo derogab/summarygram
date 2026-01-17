@@ -1,8 +1,24 @@
-import { Whisper } from 'smart-whisper';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { execSync } from 'child_process';
+
+// Lazy import for smart-whisper to avoid loading native module at import time
+// This allows tests to run without the native module being present
+type WhisperType = import('smart-whisper').Whisper;
+let WhisperClass: typeof import('smart-whisper').Whisper | null = null;
+
+async function getWhisperClass(): Promise<typeof import('smart-whisper').Whisper | null> {
+  if (WhisperClass) return WhisperClass;
+  try {
+    const smartWhisper = await import('smart-whisper');
+    WhisperClass = smartWhisper.Whisper;
+    return WhisperClass;
+  } catch (error) {
+    console.error('Failed to load smart-whisper:', error);
+    return null;
+  }
+}
 
 /**
  * Options for transcription.
@@ -17,7 +33,7 @@ export interface TranscribeOptions {
 }
 
 // Singleton Whisper instance for reuse
-let whisperInstance: Whisper | null = null;
+let whisperInstance: WhisperType | null = null;
 let currentModelPath: string | null = null;
 
 /**
@@ -47,7 +63,7 @@ export function isWhisperConfigured(): boolean {
  * @param options Optional transcription options.
  * @returns The Whisper instance, or null if not configured.
  */
-async function getWhisperInstance(options?: TranscribeOptions): Promise<Whisper | null> {
+async function getWhisperInstance(options?: TranscribeOptions): Promise<WhisperType | null> {
   const modelPath = getWhisperModelPath();
   if (!modelPath || !fs.existsSync(modelPath)) {
     return null;
@@ -62,6 +78,10 @@ async function getWhisperInstance(options?: TranscribeOptions): Promise<Whisper 
 
   // Create new instance if needed
   if (!whisperInstance) {
+    const Whisper = await getWhisperClass();
+    if (!Whisper) {
+      return null;
+    }
     whisperInstance = new Whisper(modelPath, {
       gpu: options?.gpu ?? true,
     });

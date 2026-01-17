@@ -107,6 +107,7 @@ function audioToPcm(audioFilePath: string): Float32Array | null {
 /**
  * Clean transcription text for Telegram compatibility.
  * Removes control characters, normalizes whitespace, and truncates if needed.
+ * Telegram message limit is 4096 UTF-8 characters.
  *
  * @param text The raw transcription text.
  * @returns The cleaned text.
@@ -114,17 +115,30 @@ function audioToPcm(audioFilePath: string): Float32Array | null {
 function cleanTranscription(text: string): string {
   if (!text) return '';
 
-  return text
+  let cleaned = text
     // Remove null characters
     .replace(/\x00/g, '')
-    // Remove other control characters (except newline and tab)
+    // Remove other control characters (except newline, tab, carriage return)
     .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Remove Unicode control characters (C0, C1, and other categories)
+    .replace(/[\u0080-\u009F]/g, '')
+    // Remove zero-width characters that can cause issues
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    // Remove Unicode replacement character
+    .replace(/\uFFFD/g, '')
     // Normalize multiple spaces to single space
     .replace(/ +/g, ' ')
     // Normalize multiple newlines to double newline
     .replace(/\n{3,}/g, '\n\n')
     // Trim whitespace
     .trim();
+
+  // Telegram message limit is 4096 characters
+  if (cleaned.length > 4000) {
+    cleaned = cleaned.substring(0, 4000) + '...';
+  }
+
+  return cleaned;
 }
 
 /**

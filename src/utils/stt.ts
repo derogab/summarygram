@@ -105,6 +105,29 @@ function audioToPcm(audioFilePath: string): Float32Array | null {
 }
 
 /**
+ * Clean transcription text for Telegram compatibility.
+ * Removes control characters, normalizes whitespace, and truncates if needed.
+ *
+ * @param text The raw transcription text.
+ * @returns The cleaned text.
+ */
+function cleanTranscription(text: string): string {
+  if (!text) return '';
+
+  return text
+    // Remove null characters
+    .replace(/\x00/g, '')
+    // Remove other control characters (except newline and tab)
+    .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Normalize multiple spaces to single space
+    .replace(/ +/g, ' ')
+    // Normalize multiple newlines to double newline
+    .replace(/\n{3,}/g, '\n\n')
+    // Trim whitespace
+    .trim();
+}
+
+/**
  * Transcribe an audio file to text using Whisper.
  *
  * @param audioFilePath Path to the audio file to transcribe.
@@ -151,7 +174,8 @@ export async function transcribeAudio(
     // Combine all segments into a single string
     const text = results.map(r => r.text).join(' ').trim();
 
-    return text || null;
+    // Clean the transcription for Telegram compatibility
+    return cleanTranscription(text) || null;
   } catch (error) {
     console.error('Whisper transcription error:', error);
     return null;

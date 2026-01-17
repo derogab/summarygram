@@ -1,6 +1,6 @@
 {
   "name": "summarygram",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "A telegram bot to summarize last N messages",
   "main": "index.js",
   "scripts": {
@@ -16,7 +16,8 @@
     "dotenv": "17.2.3",
     "grammy": "1.39.3",
     "node-cron": "4.2.1",
-    "redis": "5.10.0"
+    "redis": "5.10.0",
+    "smart-whisper": "0.8.1"
   },
   "devDependencies": {
     "@types/node": "^25.0.9",

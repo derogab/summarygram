@@ -1,6 +1,7 @@
 import { Bot, Context } from "grammy";
 import { generate } from '@derogab/llm-proxy';
 import Storage, * as dataUtils from "../utils/data";
+import { isWhisperConfigured, transcribeBuffer } from "../utils/stt";
 
 /**
  * Generate a summary of the chat history.
@@ -49,16 +50,38 @@ export async function onMessageReceived(storage: Storage, ctx: Context) {
   if (process.env.WHITELISTED_CHATS && !process.env.WHITELISTED_CHATS?.split(',').includes(chatId)) return;
   // Check if from is not available.
   if (!from) throw new Error('No Message Author found.');
-  // Check if text is not available.
-  if (!text) {
-    if (message?.caption) {
-      text = message?.caption;
-    } else if (message?.document?.file_name) {
-      text = message?.document?.file_name;
-    } else {
-      return;
+  
+  // If no text is available, check if a caption or document is attached.
+  if (!text && message?.caption) text = message?.caption;
+  if (!text && message?.document?.file_name) text = message?.document?.file_name;
+  
+  // Check if audio is attached (voice message or audio file). Is so, and whisper is configured, transcribe the audio and append to the text.
+  const voice = message?.voice;
+  const audio = message?.audio;
+  if ((voice || audio) && isWhisperConfigured()) {
+    const fileId = voice?.file_id || audio?.file_id;
+    if (fileId) {
+      await ctx.api.sendChatAction(chatId, 'typing').catch(() => {}); // Set the bot as typing.
+      const file = await ctx.api.getFile(fileId);
+      const filePath = file.file_path;
+      if (filePath) {
+        const fileUrl = `https://api.telegram.org/file/bot${ctx.api.token}/${filePath}`;
+        const response = await fetch(fileUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const extension = filePath.split('.').pop() || 'ogg';
+        const transcription = await transcribeBuffer(buffer, extension);
+        if (transcription) {  
+          await ctx.reply(transcription, { reply_to_message_id: message?.message_id });
+          text = ((text ? text + '\n\n' : '') + transcription).trim();
+        }
+      }
     }
   }
+
+  // Check if text is not yet available.
+  if (!text) return;
+  
   // Generate key.
   const key = dataUtils.generateKeyChat(chatId);
 

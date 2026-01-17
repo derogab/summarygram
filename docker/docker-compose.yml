@@ -42,18 +42,17 @@ services:
         condition: service_healthy
     environment:
       - REDIS_URL=redis://redis:6379
-      - OLLAMA_URI=http://host.docker.internal:11434
     env_file:
       - ../.env
     networks:
       - summarygram-network
     extra_hosts:
       - host.docker.internal:host-gateway
+      # This is used to access the host's localhost services from the app container
+      # For example, if you want to access the host's ollama server from the app container, you can use http://host.docker.internal:11434 instead of http://localhost:11434
     healthcheck:
       test: ["CMD", "node", "-e", "console.log('Health check passed')"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-
-

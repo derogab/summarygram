@@ -26,6 +26,7 @@
 | `TELEGRAM_BOT_TOKEN` | Your Telegram bot token (required) | - |
 | `WHITELISTED_CHATS` | Comma-separated list of allowed chat IDs (optional) | - |
 | `OPENAI_API_KEY` | Your OpenAI API key (optional, for OpenAI integration) | - |
+| `OPENAI_BASE_URL` | Custom OpenAI API base URL (optional, for OpenAI-compatible APIs) | - |
 | `OLLAMA_URI` | URI for the Ollama server (optional) | http://localhost:11434 |
 | `OLLAMA_MODEL` | Model to use with Ollama (optional) | llama3.1 |
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID (optional, for Cloudflare AI) | - |

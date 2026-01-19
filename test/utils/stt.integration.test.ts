@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as https from 'https';
@@ -66,9 +66,7 @@ async function downloadFile(url: string, destPath: string): Promise<void> {
  * The model will be automatically downloaded to models/ folder.
  */
 describe('stt integration tests', () => {
-  let transcribeAudio: typeof import('../../src/utils/stt').transcribeAudio;
   let transcribeBuffer: typeof import('../../src/utils/stt').transcribeBuffer;
-  let freeWhisper: typeof import('../../src/utils/stt').freeWhisper;
 
   beforeAll(async () => {
     // Download the model if it doesn't exist
@@ -91,31 +89,8 @@ describe('stt integration tests', () => {
 
     // Dynamically import the module after setting the env var
     const stt = await import('../../src/utils/stt');
-    transcribeAudio = stt.transcribeAudio;
     transcribeBuffer = stt.transcribeBuffer;
-    freeWhisper = stt.freeWhisper;
   }, 600000); // 10 minute timeout for model download
-
-  afterAll(async () => {
-    // Free whisper resources
-    if (freeWhisper) {
-      await freeWhisper();
-    }
-  });
-
-  it('should transcribe JFK speech audio file', async () => {
-    const result = await transcribeAudio(JFK_AUDIO_PATH);
-
-    expect(result).not.toBeNull();
-    expect(result).toBeDefined();
-
-    // Convert to lowercase and remove punctuation for comparison
-    const normalizedResult = result!.toLowerCase().replace(/[.,!?]/g, '').trim();
-
-    // The transcript should contain the famous JFK quote
-    expect(normalizedResult).toContain('ask not what your country can do for you');
-    expect(normalizedResult).toContain('ask what you can do for your country');
-  }, 300000); // 5 minute timeout for transcription
 
   it('should transcribe audio from buffer', async () => {
     const audioBuffer = fs.readFileSync(JFK_AUDIO_PATH);

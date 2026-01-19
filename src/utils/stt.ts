@@ -1,4 +1,5 @@
-import * as sttProxy from '@derogab/stt-proxy';
+import { transcribe } from '@derogab/stt-proxy';
+import * as fs from 'fs';
 
 /**
  * Options for transcription.
@@ -8,8 +9,6 @@ export interface TranscribeOptions {
   language?: string;
   /** Translate from source language to English */
   translate?: boolean;
-  /** Use GPU for processing (default: true on supported systems) */
-  gpu?: boolean;
 }
 
 /**
@@ -27,7 +26,8 @@ export function getWhisperModelPath(): string | null {
  * @returns True if WHISPER_CPP_MODEL_PATH is set and the file exists.
  */
 export function isWhisperConfigured(): boolean {
-  return sttProxy.isWhisperConfigured();
+  const modelPath = getWhisperModelPath();
+  return modelPath !== null && fs.existsSync(modelPath);
 }
 
 /**
@@ -42,11 +42,7 @@ export async function transcribeAudio(
   options?: TranscribeOptions
 ): Promise<string | null> {
   try {
-    const result = await sttProxy.transcribe(audioFilePath, {
-      language: options?.language,
-      translate: options?.translate,
-    });
-
+    const result = await transcribe(audioFilePath, options);
     return result.text || null;
   } catch (error) {
     console.error('STT transcription error:', error);
@@ -83,11 +79,7 @@ export async function transcribeBuffer(
   options?: TranscribeOptions
 ): Promise<string | null> {
   try {
-    const result = await sttProxy.transcribeBuffer(audioBuffer, {
-      language: options?.language,
-      translate: options?.translate,
-    });
-
+    const result = await transcribe(audioBuffer, options);
     return result.text || null;
   } catch (error) {
     console.error('STT transcription error:', error);
@@ -97,10 +89,11 @@ export async function transcribeBuffer(
 
 /**
  * Free the Whisper instance and release resources.
- * Call this when you're done using STT to free memory.
+ * Note: In @derogab/stt-proxy v0.2.0+, resource management is handled automatically.
+ * This function is kept for backward compatibility but is a no-op.
  */
 export async function freeWhisper(): Promise<void> {
-  await sttProxy.freeWhisper();
+  // No-op: resource management is handled automatically by @derogab/stt-proxy
 }
 
 /**
@@ -109,7 +102,20 @@ export async function freeWhisper(): Promise<void> {
  * @returns Array of available model names.
  */
 export function getAvailableModels(): string[] {
-  return sttProxy.getAvailableModels();
+  return [
+    'ggml-tiny.bin',
+    'ggml-tiny.en.bin',
+    'ggml-base.bin',
+    'ggml-base.en.bin',
+    'ggml-small.bin',
+    'ggml-small.en.bin',
+    'ggml-medium.bin',
+    'ggml-medium.en.bin',
+    'ggml-large-v1.bin',
+    'ggml-large-v2.bin',
+    'ggml-large-v3.bin',
+    'ggml-large-v3-turbo.bin',
+  ];
 }
 
 /**
@@ -119,5 +125,5 @@ export function getAvailableModels(): string[] {
  * @returns The download URL.
  */
 export function getModelUrl(modelName: string): string {
-  return sttProxy.getModelUrl(modelName);
+  return `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${modelName}`;
 }

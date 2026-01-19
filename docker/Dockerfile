@@ -38,14 +38,11 @@ WORKDIR /usr/src/app
 # Copy package files
 COPY package*.json ./
 
-# Install only production dependencies (skip scripts since binaries will be copied)
-RUN npm ci --omit=dev --ignore-scripts
-
-# Explicitly build smart-whisper native module
+# Install only production dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     python3 \
-    && npm rebuild smart-whisper
+    && npm ci --omit=dev
 
 # Copy prebuilt llama.cpp binaries from builder
 COPY --from=builder /usr/src/app/node_modules/node-llama-cpp ./node_modules/node-llama-cpp

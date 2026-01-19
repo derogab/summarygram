@@ -1,7 +1,16 @@
 import { Bot, Context } from "grammy";
 import { generate } from '@derogab/llm-proxy';
+import { transcribe } from '@derogab/stt-proxy';
+import * as fs from 'fs';
 import Storage, * as dataUtils from "../utils/data";
-import { isWhisperConfigured, transcribeBuffer } from "../utils/stt";
+
+/**
+ * Check if Whisper STT is configured and available.
+ */
+function isWhisperConfigured(): boolean {
+  const modelPath = process.env.WHISPER_CPP_MODEL_PATH;
+  return modelPath !== undefined && fs.existsSync(modelPath);
+}
 
 /**
  * Generate a summary of the chat history.
@@ -69,11 +78,10 @@ export async function onMessageReceived(storage: Storage, ctx: Context) {
         const response = await fetch(fileUrl);
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        const extension = filePath.split('.').pop() || 'ogg';
-        const transcription = await transcribeBuffer(buffer, extension);
-        if (transcription) {  
-          await ctx.reply(transcription, { reply_to_message_id: message?.message_id });
-          text = ((text ? text + '\n\n' : '') + transcription).trim();
+        const result = await transcribe(buffer);
+        if (result?.text) {
+          await ctx.reply(result.text, { reply_to_message_id: message?.message_id });
+          text = ((text ? text + '\n\n' : '') + result.text).trim();
         }
       }
     }

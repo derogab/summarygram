@@ -25,6 +25,7 @@
 |----------|-------------|---------|
 | `TELEGRAM_BOT_TOKEN` | Your Telegram bot token (required) | - |
 | `WHITELISTED_CHATS` | Comma-separated list of allowed chat IDs (optional) | - |
+| `PROVIDER` | Explicit LLM provider selection (optional). Valid options: `openai`, `cloudflare`, `ollama`, `llama.cpp`. If not set, auto-detects based on configured credentials. | - |
 | `OPENAI_API_KEY` | Your OpenAI API key (optional, for OpenAI integration) | - |
 | `OPENAI_BASE_URL` | Custom OpenAI API base URL (optional, for OpenAI-compatible APIs) | - |
 | `OPENAI_MODEL` | OpenAI model to use (optional, for OpenAI integration) | gpt-4o-mini |

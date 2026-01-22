@@ -5,11 +5,22 @@ import * as fs from 'fs';
 import Storage, * as dataUtils from "../utils/data";
 
 /**
- * Check if Whisper STT is configured and available.
+ * Check if STT (Speech-to-Text) is configured and available.
+ * Supports whisper.cpp (local) and Cloudflare AI Whisper.
  */
-function isWhisperConfigured(): boolean {
-  const modelPath = process.env.WHISPER_CPP_MODEL_PATH;
-  return modelPath !== undefined && fs.existsSync(modelPath);
+function isSTTConfigured(): boolean {
+  // Check for whisper.cpp (local)
+  const whisperModelPath = process.env.WHISPER_CPP_MODEL_PATH;
+  if (whisperModelPath !== undefined && fs.existsSync(whisperModelPath)) {
+    return true;
+  }
+  // Check for Cloudflare AI Whisper
+  const cloudflareAccountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const cloudflareAuthKey = process.env.CLOUDFLARE_AUTH_KEY;
+  if (cloudflareAccountId !== undefined && cloudflareAuthKey !== undefined) {
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -67,7 +78,7 @@ export async function onMessageReceived(storage: Storage, ctx: Context) {
   // Check if audio is attached (voice message or audio file). Is so, and whisper is configured, transcribe the audio and append to the text.
   const voice = message?.voice;
   const audio = message?.audio;
-  if ((voice || audio) && isWhisperConfigured()) {
+  if ((voice || audio) && isSTTConfigured()) {
     const fileId = voice?.file_id || audio?.file_id;
     if (fileId) {
       await ctx.api.sendChatAction(chatId, 'typing').catch(() => {}); // Set the bot as typing.

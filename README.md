@@ -66,13 +66,20 @@
 6. Create a `.env` file in the project root with your configuration:
    ```env
    TELEGRAM_BOT_TOKEN=your_bot_token_here
+
+   # LLM Configuration (choose one provider)
+   # LLM_PROVIDER=openai  # Optional: force specific provider (openai, cloudflare, ollama, llama.cpp)
    OPENAI_API_KEY=your_openai_key_here
-   # Optional: enable voice transcription with whisper.cpp (local)
+
+   # STT Configuration for voice transcription (choose one provider)
+   # STT_PROVIDER=whisper.cpp  # Optional: force specific provider (whisper.cpp, cloudflare)
    WHISPER_CPP_MODEL_PATH=/path/to/models/ggml-base.bin
-   # Or use Cloudflare AI for both LLM and voice transcription
+
+   # Or use Cloudflare AI for both LLM and STT
    # CLOUDFLARE_ACCOUNT_ID=your_account_id_here
    # CLOUDFLARE_AUTH_KEY=your_auth_key_here
-   # Add other variables as needed
+   # LLM_PROVIDER=cloudflare
+   # STT_PROVIDER=cloudflare
    ```
 
 ### Deployment

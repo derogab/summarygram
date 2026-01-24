@@ -33,7 +33,7 @@ function isSTTConfigured(): boolean {
   // Check for Cloudflare AI Whisper
   const cloudflareAccountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   const cloudflareAuthKey = process.env.CLOUDFLARE_AUTH_KEY;
-  if (cloudflareAccountId !== undefined && cloudflareAuthKey !== undefined) {
+  if (cloudflareAccountId && cloudflareAuthKey) {
     return true;
   }
   return false;

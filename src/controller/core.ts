@@ -5,11 +5,38 @@ import * as fs from 'fs';
 import Storage, * as dataUtils from "../utils/data";
 
 /**
- * Check if Whisper STT is configured and available.
+ * Check if STT (Speech-to-Text) is configured and available.
+ * Supports whisper.cpp (local) and Cloudflare AI Whisper.
+ * Respects STT_PROVIDER environment variable for explicit provider selection.
  */
-function isWhisperConfigured(): boolean {
-  const modelPath = process.env.WHISPER_CPP_MODEL_PATH;
-  return modelPath !== undefined && fs.existsSync(modelPath);
+function isSTTConfigured(): boolean {
+  const sttProvider = process.env.STT_PROVIDER;
+
+  // If provider is explicitly set, only check that provider's configuration
+  if (sttProvider === 'whisper.cpp') {
+    const whisperModelPath = process.env.WHISPER_CPP_MODEL_PATH;
+    return whisperModelPath !== undefined && fs.existsSync(whisperModelPath);
+  }
+
+  if (sttProvider === 'cloudflare') {
+    const cloudflareAccountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+    const cloudflareAuthKey = process.env.CLOUDFLARE_AUTH_KEY;
+    return !!cloudflareAccountId && !!cloudflareAuthKey;
+  }
+
+  // If no provider explicitly set, auto-detect (check all providers)
+  // Check for whisper.cpp (local)
+  const whisperModelPath = process.env.WHISPER_CPP_MODEL_PATH;
+  if (whisperModelPath !== undefined && fs.existsSync(whisperModelPath)) {
+    return true;
+  }
+  // Check for Cloudflare AI Whisper
+  const cloudflareAccountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const cloudflareAuthKey = process.env.CLOUDFLARE_AUTH_KEY;
+  if (cloudflareAccountId && cloudflareAuthKey) {
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -67,7 +94,7 @@ export async function onMessageReceived(storage: Storage, ctx: Context) {
   // Check if audio is attached (voice message or audio file). Is so, and whisper is configured, transcribe the audio and append to the text.
   const voice = message?.voice;
   const audio = message?.audio;
-  if ((voice || audio) && isWhisperConfigured()) {
+  if ((voice || audio) && isSTTConfigured()) {
     const fileId = voice?.file_id || audio?.file_id;
     if (fileId) {
       await ctx.api.sendChatAction(chatId, 'typing').catch(() => {}); // Set the bot as typing.

@@ -68,8 +68,8 @@
    TELEGRAM_BOT_TOKEN=your_bot_token_here
 
    # LLM Configuration (choose one provider)
-   # LLM_PROVIDER=openai  # Optional: force specific provider (openai, cloudflare, ollama, llama.cpp)
-   OPENAI_API_KEY=your_openai_key_here
+   # LLM_PROVIDER=llama.cpp  # Optional: force specific provider (openai, cloudflare, ollama, llama.cpp)
+   LLAMA_CPP_MODEL_PATH=/path/to/models/your-model.gguf
 
    # STT Configuration for voice transcription (choose one provider)
    # STT_PROVIDER=whisper.cpp  # Optional: force specific provider (whisper.cpp, cloudflare)

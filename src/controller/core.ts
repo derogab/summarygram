@@ -21,7 +21,7 @@ function isSTTConfigured(): boolean {
   if (sttProvider === 'cloudflare') {
     const cloudflareAccountId = process.env.CLOUDFLARE_ACCOUNT_ID;
     const cloudflareAuthKey = process.env.CLOUDFLARE_AUTH_KEY;
-    return cloudflareAccountId !== undefined && cloudflareAuthKey !== undefined;
+    return !!cloudflareAccountId && !!cloudflareAuthKey;
   }
 
   // If no provider explicitly set, auto-detect (check all providers)

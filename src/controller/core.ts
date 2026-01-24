@@ -7,8 +7,24 @@ import Storage, * as dataUtils from "../utils/data";
 /**
  * Check if STT (Speech-to-Text) is configured and available.
  * Supports whisper.cpp (local) and Cloudflare AI Whisper.
+ * Respects STT_PROVIDER environment variable for explicit provider selection.
  */
 function isSTTConfigured(): boolean {
+  const sttProvider = process.env.STT_PROVIDER;
+
+  // If provider is explicitly set, only check that provider's configuration
+  if (sttProvider === 'whisper.cpp') {
+    const whisperModelPath = process.env.WHISPER_CPP_MODEL_PATH;
+    return whisperModelPath !== undefined && fs.existsSync(whisperModelPath);
+  }
+
+  if (sttProvider === 'cloudflare') {
+    const cloudflareAccountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+    const cloudflareAuthKey = process.env.CLOUDFLARE_AUTH_KEY;
+    return cloudflareAccountId !== undefined && cloudflareAuthKey !== undefined;
+  }
+
+  // If no provider explicitly set, auto-detect (check all providers)
   // Check for whisper.cpp (local)
   const whisperModelPath = process.env.WHISPER_CPP_MODEL_PATH;
   if (whisperModelPath !== undefined && fs.existsSync(whisperModelPath)) {

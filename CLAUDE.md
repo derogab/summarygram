@@ -49,3 +49,46 @@ All configuration via environment variables (see README.md for full list). Key o
 - `WHITELISTED_CHATS`: Comma-separated chat IDs for access control
 - `CRON_SCHEDULE`: When to send auto-summaries (default: `59 23 * * *`), set to `never` to disable
 - LLM provider configs: `OPENAI_API_KEY`, `OLLAMA_URI`/`OLLAMA_MODEL`, Cloudflare credentials, or `LLAMA_CPP_MODEL_PATH` for local inference
+
+## Conventional Commits
+
+This project follows the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification.
+
+### Format
+
+```
+<type>: <description>
+```
+
+### Types
+
+| Type | Description |
+|------|-------------|
+| `feat` | New feature or functionality |
+| `fix` | Bug fix |
+| `docs` | Documentation only |
+| `refactor` | Code change that neither fixes a bug nor adds a feature |
+| `test` | Adding or modifying tests |
+| `chore` | Maintenance tasks (dependencies, configs) |
+| `build` | Changes to build system or dependencies |
+| `perf` | Performance improvement |
+| `ci` | CI/CD configuration changes |
+
+### Examples
+
+```bash
+feat: add support for new LLM provider
+fix: resolve timeout issue with Ollama requests
+docs: update README with configuration examples
+refactor: simplify provider selection logic
+test: add unit tests for error handling
+chore: update dependencies
+```
+
+### Breaking Changes
+
+Add `!` after the type for breaking changes:
+
+```bash
+feat!: change API response format
+```

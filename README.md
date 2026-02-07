@@ -2,7 +2,7 @@
   <img src="./.github/assets/logo.png" width="140px" style="border-radius: 15%;">
 </p>
 <h1 align="center">SummaryGram</h1>
-<p align="center">A Dockerized Telegram bot that summarize last messages in a group</p>
+<p align="center">A Dockerized Telegram bot that summarizes last messages in a group</p>
 <p align="center">
   <a href="https://github.com/derogab/summarygram/actions/workflows/docker-publish.yml">
     <img src="https://github.com/derogab/summarygram/actions/workflows/docker-publish.yml/badge.svg">
@@ -12,9 +12,10 @@
 ### Features
 
 - 🤖 Telegram bot interface
-- ⚙️ Command-based interaction
-- 📝 Summarize recent messages in group chats
 - 🧠 AI-powered summarization
+  - 📝 Manual summaries via `/summary` command
+  - ⚡ Auto-summarization of long messages (configurable threshold)
+  - ⏰ Scheduled automatic summaries via cron jobs
 - 🔌 Customizable LLM integration (OpenAI, [Ollama](https://github.com/ollama/ollama), Cloudflare AI, [llama.cpp](https://github.com/ggml-org/llama.cpp))
 - 🎤 Voice message transcription using [whisper.cpp](https://github.com/ggerganov/whisper.cpp) or Cloudflare AI Whisper
 - 🐳 Docker containerized for easy deployment
@@ -101,9 +102,26 @@ docker compose -f docker/docker-compose.yml down
 2. The bot will automatically start monitoring messages in the group.
 3. If you want to restrict the bot to specific groups, add the group IDs to the `WHITELISTED_CHATS` environment variable, separated by commas, and restart the bot.
 
-#### 2. Use Summary Command
+#### 2. Bot Features
+
+**Manual Summaries:**
 - Send `/summary` in the group chat.
-- The bot will analyze all available messages in the chat and provide a concise summary. The message history is automatically cleared after 8 hours of inactivity.
+- The bot will analyze all available messages in the chat and provide a concise summary.
+- Message history is automatically cleared after 8 hours of inactivity.
+
+**Voice Message Transcription:**
+- Send voice messages or audio files to the group.
+- If STT is configured, the bot will automatically transcribe and reply with the text.
+- Transcriptions are included in the message history for summaries.
+
+**Auto-Summarization:**
+- Long messages (exceeding `MSG_LENGTH_LIMIT` characters, default: 1000) are automatically summarized.
+- The bot replies with a "TL;DR" summary of the long message.
+
+**Scheduled Summaries:**
+- Configure `CRON_SCHEDULE` to receive automatic daily summaries.
+- Default: 11:59 PM daily (`59 23 * * *`).
+- Set to `never` to disable automatic summaries.
 
 ### Credits
 _SummaryGram_ is made with ♥ by [derogab](https://github.com/derogab) and it's released under the [MIT license](./LICENSE).

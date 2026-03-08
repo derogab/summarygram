@@ -84,12 +84,9 @@ COPY --from=builder /usr/src/app/out ./out
 # Copy production node_modules
 COPY --from=deps /usr/src/app/node_modules ./node_modules
 
-# Copy package.json for npm start
-COPY package.json ./
-
 # Copy static ffmpeg binaries used by whisper.cpp transcription.
 COPY --from=ffmpeg /ffmpeg /usr/local/bin/ffmpeg
 COPY --from=ffmpeg /ffprobe /usr/local/bin/ffprobe
 
 # Run command
-CMD ["npm", "run", "start"]
+CMD ["node", "./out"]

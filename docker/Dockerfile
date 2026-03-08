@@ -38,36 +38,45 @@ WORKDIR /usr/src/app
 # Copy package files
 COPY package*.json ./
 
-# Install only production dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    python3 \
-    && npm ci --omit=dev
+# Install only production dependencies without re-running native build scripts
+RUN npm ci --omit=dev --ignore-scripts && rm -rf /root/.npm
 
-# Copy prebuilt llama.cpp binaries from builder
+# Copy prebuilt llama.cpp and smart-whisper binaries from builder
 COPY --from=builder /usr/src/app/node_modules/node-llama-cpp ./node_modules/node-llama-cpp
 COPY --from=builder /usr/src/app/node_modules/@node-llama-cpp ./node_modules/@node-llama-cpp
+COPY --from=builder /usr/src/app/node_modules/smart-whisper ./node_modules/smart-whisper
 
-# Clean up unnecessary files to reduce image size:
-# - Remove non-Linux platform binaries (mac, win)
-# - Remove typescript (peer optional, not needed at runtime)
-# - Remove source files from node-llama-cpp (keep llama/ for runtime metadata)
+# Clean up unnecessary files to reduce image size
 RUN find node_modules/@node-llama-cpp -maxdepth 1 -type d \( -name "mac-*" -o -name "win-*" \) -exec rm -rf {} + 2>/dev/null || true && \
     rm -rf node_modules/typescript && \
     rm -rf node_modules/node-llama-cpp/src && \
     rm -rf node_modules/node-llama-cpp/*.md && \
-    rm -rf node_modules/node-llama-cpp/tsconfig*.json
+    rm -rf node_modules/node-llama-cpp/tsconfig*.json && \
+    rm -rf node_modules/smart-whisper/src && \
+    rm -rf node_modules/smart-whisper/scripts && \
+    rm -rf node_modules/smart-whisper/whisper.cpp && \
+    rm -rf node_modules/smart-whisper/README.md && \
+    rm -rf node_modules/smart-whisper/binding.gyp
 
 # ==============================================================================
-# Stage 3: Production - Minimal runtime image
+# Stage 3: Static ffmpeg binaries
+# ==============================================================================
+FROM mwader/static-ffmpeg:7.1.1 AS ffmpeg
+
+# ==============================================================================
+# Stage 4: Production - Minimal runtime image
 # ==============================================================================
 FROM node:lts-slim AS production
 
 # Create app directory
 WORKDIR /usr/src/app
 
-# Install dependencies
-RUN apt-get update && apt-get install -y ffmpeg
+# Remove Node.js build-time extras not needed at runtime.
+RUN rm -rf /usr/local/include && \
+    rm -rf /usr/local/lib/node_modules/npm && \
+    rm -rf /usr/local/lib/node_modules/corepack && \
+    rm -rf /opt/yarn-v* && \
+    rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg
 
 # Copy compiled output
 COPY --from=builder /usr/src/app/out ./out
@@ -75,8 +84,9 @@ COPY --from=builder /usr/src/app/out ./out
 # Copy production node_modules
 COPY --from=deps /usr/src/app/node_modules ./node_modules
 
-# Copy package.json for npm start
-COPY package.json ./
+# Copy static ffmpeg binaries used by whisper.cpp transcription.
+COPY --from=ffmpeg /ffmpeg /usr/local/bin/ffmpeg
+COPY --from=ffmpeg /ffprobe /usr/local/bin/ffprobe
 
 # Run command
-CMD ["npm", "run", "start"]
+CMD ["node", "./out"]

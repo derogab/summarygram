@@ -1,10 +1,25 @@
-import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
 import { onMessageReceived, onCronJob } from '../../src/controller/core';
+import * as fs from 'fs';
 
 // Mock llm-proxy
 vi.mock('@derogab/llm-proxy', () => ({
   generate: vi.fn().mockResolvedValue({ content: 'Mocked summary response' }),
 }));
+
+// Mock stt-proxy
+vi.mock('@derogab/stt-proxy', () => ({
+  transcribe: vi.fn().mockResolvedValue({ text: 'Mocked transcription' }),
+}));
+
+// Mock fs
+vi.mock('fs', async () => {
+  const actual = await vi.importActual<typeof import('fs')>('fs');
+  return {
+    ...actual,
+    existsSync: vi.fn().mockReturnValue(false),
+  };
+});
 
 // Mock data utils
 vi.mock('../../src/utils/data', async () => {
@@ -26,6 +41,7 @@ vi.mock('../../src/utils/data', async () => {
 import Storage from '../../src/utils/data';
 import * as dataUtils from '../../src/utils/data';
 import { generate } from '@derogab/llm-proxy';
+import { transcribe } from '@derogab/stt-proxy';
 
 describe('onMessageReceived', () => {
   let mockStorage: Storage;
@@ -35,6 +51,11 @@ describe('onMessageReceived', () => {
     vi.clearAllMocks();
     delete process.env.WHITELISTED_CHATS;
     delete process.env.MSG_LENGTH_LIMIT;
+    delete process.env.STT_PROVIDER;
+    delete process.env.WHISPER_CPP_MODEL_PATH;
+    delete process.env.CLOUDFLARE_ACCOUNT_ID;
+    delete process.env.CLOUDFLARE_AUTH_KEY;
+    (fs.existsSync as Mock).mockReturnValue(false);
 
     mockStorage = new Storage();
     mockCtx = {
@@ -47,10 +68,17 @@ describe('onMessageReceived', () => {
         },
       },
       api: {
+        token: 'bot-token',
         sendChatAction: vi.fn().mockResolvedValue(undefined),
+        getFile: vi.fn().mockResolvedValue({ file_path: 'voice/file.ogg' }),
       },
       reply: vi.fn().mockResolvedValue(undefined),
     };
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('should throw error when chatId is not available', async () => {
@@ -163,6 +191,65 @@ describe('onMessageReceived', () => {
     expect(dataUtils.updateHistory).toHaveBeenCalled();
     expect(generate).not.toHaveBeenCalled();
     expect(mockCtx.reply).not.toHaveBeenCalled();
+  });
+
+  it('should transcribe audio when Cloudflare STT is configured', async () => {
+    process.env.STT_PROVIDER = 'cloudflare';
+    process.env.CLOUDFLARE_ACCOUNT_ID = 'account-id';
+    process.env.CLOUDFLARE_AUTH_KEY = 'auth-key';
+    mockCtx.update.message.audio = { file_id: 'audio-file-id' };
+    const arrayBuffer = new Uint8Array([1, 2, 3]).buffer;
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      arrayBuffer: vi.fn().mockResolvedValue(arrayBuffer),
+    }));
+
+    await onMessageReceived(mockStorage, mockCtx);
+
+    expect(mockCtx.api.getFile).toHaveBeenCalledWith('audio-file-id');
+    expect(fetch).toHaveBeenCalledWith('https://api.telegram.org/file/botbot-token/voice/file.ogg');
+    expect(transcribe).toHaveBeenCalledWith(expect.any(Buffer));
+    expect(mockCtx.reply).toHaveBeenCalledWith(
+      'Mocked transcription',
+      { reply_to_message_id: 1 }
+    );
+    expect(dataUtils.updateHistory).toHaveBeenCalledWith(
+      mockStorage,
+      'chat:123',
+      'testuser',
+      'Hello world\n\nMocked transcription'
+    );
+  });
+
+  it('should transcribe voice when whisper.cpp STT is configured', async () => {
+    process.env.STT_PROVIDER = 'whisper.cpp';
+    process.env.WHISPER_CPP_MODEL_PATH = '/tmp/whisper-model.bin';
+    (fs.existsSync as Mock).mockReturnValue(true);
+    mockCtx.update.message.text = undefined;
+    mockCtx.update.message.voice = { file_id: 'voice-file-id' };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      arrayBuffer: vi.fn().mockResolvedValue(new Uint8Array([4, 5, 6]).buffer),
+    }));
+
+    await onMessageReceived(mockStorage, mockCtx);
+
+    expect(mockCtx.api.getFile).toHaveBeenCalledWith('voice-file-id');
+    expect(dataUtils.updateHistory).toHaveBeenCalledWith(
+      mockStorage,
+      'chat:123',
+      'testuser',
+      'Mocked transcription'
+    );
+  });
+
+  it('should ignore audio when STT is not configured', async () => {
+    mockCtx.update.message.text = undefined;
+    mockCtx.update.message.voice = { file_id: 'voice-file-id' };
+
+    await onMessageReceived(mockStorage, mockCtx);
+
+    expect(mockCtx.api.getFile).not.toHaveBeenCalled();
+    expect(transcribe).not.toHaveBeenCalled();
+    expect(dataUtils.updateHistory).not.toHaveBeenCalled();
   });
 });
 

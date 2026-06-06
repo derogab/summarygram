@@ -20,9 +20,9 @@
     "redis": "5.11.0"
   },
   "devDependencies": {
-    "@types/node": "^25.9.2",
-    "@vitest/coverage-v8": "^4.1.8",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
+    "@types/node": "25.9.2",
+    "@vitest/coverage-v8": "4.1.8",
+    "typescript": "6.0.3",
+    "vitest": "4.1.8"
   }
 }

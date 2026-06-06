@@ -3,6 +3,9 @@
   "version": "0.7.3",
   "description": "A telegram bot to summarize last N messages",
   "main": "index.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "compile": "tsc",
     "start": "node ./out",

@@ -20,7 +20,7 @@
     "dotenv": "17.4.2",
     "grammy": "1.43.0",
     "node-cron": "4.2.1",
-    "redis": "6.0.0"
+    "redis": "6.1.0"
   },
   "devDependencies": {
     "@types/node": "25.9.2",

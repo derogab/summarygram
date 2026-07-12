@@ -18,9 +18,9 @@
     "@derogab/llm-proxy": "0.4.4",
     "@derogab/stt-proxy": "0.3.3",
     "dotenv": "17.4.2",
-    "grammy": "1.43.0",
-    "node-cron": "4.2.1",
-    "redis": "6.0.0"
+    "grammy": "1.44.0",
+    "node-cron": "4.6.0",
+    "redis": "6.1.0"
   },
   "devDependencies": {
     "@types/node": "25.9.5",

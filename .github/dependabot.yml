@@ -16,6 +16,16 @@ updates:
       - 'derogab'
     labels:
       - 'dependencies'
+    groups:
+      github-actions-major:
+        update-types:
+          - 'major'
+      github-actions-minor:
+        update-types:
+          - 'minor'
+      github-actions-patch:
+        update-types:
+          - 'patch'
   
   # Maintain dependencies for Node NPM
   - package-ecosystem: 'npm'
@@ -27,3 +37,14 @@ updates:
       - 'derogab'
     labels:
       - 'dependencies'
+    groups:
+      npm-minor:
+        update-types:
+          - 'minor'
+      npm-patch:
+        update-types:
+          - 'patch'
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - 'version-update:semver-major'

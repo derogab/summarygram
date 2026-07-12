@@ -15,17 +15,17 @@
   "author": "derogab",
   "license": "MIT",
   "dependencies": {
-    "@derogab/llm-proxy": "0.4.3",
-    "@derogab/stt-proxy": "0.3.2",
+    "@derogab/llm-proxy": "0.4.4",
+    "@derogab/stt-proxy": "0.3.3",
     "dotenv": "17.4.2",
     "grammy": "1.43.0",
     "node-cron": "4.2.1",
     "redis": "6.0.0"
   },
   "devDependencies": {
-    "@types/node": "25.9.2",
-    "@vitest/coverage-v8": "4.1.8",
+    "@types/node": "25.9.5",
+    "@vitest/coverage-v8": "4.1.10",
     "typescript": "6.0.3",
-    "vitest": "4.1.8"
+    "vitest": "4.1.10"
   }
 }

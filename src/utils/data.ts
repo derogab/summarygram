@@ -24,10 +24,13 @@ function getDb(): DatabaseSync {
   db = new DatabaseSync(dbPath);
   db.exec(`
     CREATE TABLE IF NOT EXISTS messages (
-      chat_id    TEXT    NOT NULL,
-      username   TEXT    NOT NULL,
-      message    TEXT    NOT NULL,
-      created_at INTEGER NOT NULL
+      chat_id        TEXT    NOT NULL,
+      user_id        TEXT    NOT NULL,
+      username       TEXT,
+      user_firstname TEXT,
+      user_lastname  TEXT,
+      message        TEXT    NOT NULL,
+      created_at     INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages (chat_id);
   `);
@@ -47,13 +50,16 @@ export function close() {
  * Update history in the storage.
  *
  * @param chatId the id of the chat to update the history.
- * @param username the username of the user who sent the message.
+ * @param userId the id of the user who sent the message.
+ * @param username the username of the user who sent the message, if available.
+ * @param userFirstname the first name of the user who sent the message, if available.
+ * @param userLastname the last name of the user who sent the message, if available.
  * @param message the message to update the history with.
  */
-export function updateHistory(chatId: string, username: string, message: string) {
+export function updateHistory(chatId: string, userId: string, username: string | undefined, userFirstname: string | undefined, userLastname: string | undefined, message: string) {
   getDb()
-    .prepare('INSERT INTO messages (chat_id, username, message, created_at) VALUES (?, ?, ?, ?)')
-    .run(chatId, username, message, Date.now());
+    .prepare('INSERT INTO messages (chat_id, user_id, username, user_firstname, user_lastname, message, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(chatId, userId, username ?? null, userFirstname ?? null, userLastname ?? null, message, Date.now());
 }
 
 /**
@@ -64,8 +70,9 @@ export function updateHistory(chatId: string, username: string, message: string)
  */
 export function getHistory(chatId: string): { username: string, message: string }[] {
   // Retrieve the recent history in insertion order. Older messages stay stored but are not returned.
+  // Users without a username are displayed by first name, or user id as a last resort.
   const rows = getDb()
-    .prepare('SELECT username, message FROM messages WHERE chat_id = ? AND created_at >= ? ORDER BY rowid')
+    .prepare('SELECT COALESCE(username, user_firstname, user_id) AS username, message FROM messages WHERE chat_id = ? AND created_at >= ? ORDER BY rowid')
     .all(chatId, Date.now() - HISTORY_WINDOW_MS);
   return rows.map(row => ({ username: row.username as string, message: row.message as string }));
 }

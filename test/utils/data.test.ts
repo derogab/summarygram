@@ -16,8 +16,8 @@ describe('history', () => {
   });
 
   it('should store and retrieve messages in insertion order', () => {
-    updateHistory('123', 'alice', 'Hello world');
-    updateHistory('123', 'bob', 'How are you?');
+    updateHistory('123', '1', 'alice', 'Alice', 'Smith','Hello world');
+    updateHistory('123', '2', 'bob', 'Bob', 'Jones','How are you?');
 
     expect(getHistory('123')).toEqual([
       { username: 'alice', message: 'Hello world' },
@@ -26,14 +26,30 @@ describe('history', () => {
   });
 
   it('should keep chats separate', () => {
-    updateHistory('123', 'alice', 'Hello');
-    updateHistory('456', 'bob', 'Hi');
+    updateHistory('123', '1', 'alice', 'Alice', 'Smith','Hello');
+    updateHistory('456', '2', 'bob', 'Bob', 'Jones', 'Hi');
 
     expect(getHistory('123')).toEqual([{ username: 'alice', message: 'Hello' }]);
   });
 
+  it('should accept messages without user names', () => {
+    updateHistory('123', '1', 'alice', undefined, undefined, 'Hello');
+
+    expect(getHistory('123')).toEqual([{ username: 'alice', message: 'Hello' }]);
+  });
+
+  it('should fall back to first name or user id when username is missing', () => {
+    updateHistory('123', '1', undefined, 'Alice', undefined, 'Hello');
+    updateHistory('123', '2', undefined, undefined, undefined, 'Hi');
+
+    expect(getHistory('123')).toEqual([
+      { username: 'Alice', message: 'Hello' },
+      { username: '2', message: 'Hi' },
+    ]);
+  });
+
   it('should preserve messages containing the ### separator', () => {
-    updateHistory('123', 'alice', 'a###b###c');
+    updateHistory('123', '1', 'alice', 'Alice', 'Smith','a###b###c');
 
     expect(getHistory('123')).toEqual([{ username: 'alice', message: 'a###b###c' }]);
   });
@@ -43,9 +59,9 @@ describe('history', () => {
     // Store a message 25 hours in the past.
     vi.useFakeTimers();
     vi.setSystemTime(now - 1000 * 60 * 60 * 25);
-    updateHistory('123', 'alice', 'Old message');
+    updateHistory('123', '1', 'alice', 'Alice', 'Smith','Old message');
     vi.setSystemTime(now);
-    updateHistory('123', 'bob', 'Recent message');
+    updateHistory('123', '2', 'bob', 'Bob', 'Jones','Recent message');
 
     expect(getHistory('123')).toEqual([{ username: 'bob', message: 'Recent message' }]);
 
@@ -61,8 +77,8 @@ describe('getActiveChats', () => {
   });
 
   it('should return the ids of chats with history', () => {
-    updateHistory('123', 'alice', 'Hello');
-    updateHistory('-100456', 'bob', 'Hi');
+    updateHistory('123', '1', 'alice', 'Alice', 'Smith','Hello');
+    updateHistory('-100456', '2', 'bob', 'Bob', 'Jones', 'Hi');
 
     expect(getActiveChats().sort()).toEqual(['-100456', '123']);
   });

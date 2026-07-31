@@ -73,14 +73,15 @@ export async function onMessageReceived(ctx: Context) {
   const chatId = message?.chat?.id ? ''+message?.chat?.id : undefined;
   const fromId = message?.from?.id ? ''+message?.from?.id : undefined;
   const fromUsername = message?.from?.username ? ''+message?.from?.username : undefined;
-  const from = fromUsername || fromId;
+  const fromFirstname = message?.from?.first_name ? ''+message?.from?.first_name : undefined;
+  const fromLastname = message?.from?.last_name ? ''+message?.from?.last_name : undefined;
 
   // Check if chatId is not available.
   if (!chatId) throw new Error('No Chat found.');
   // Check if the chat is whitelisted.
   if (process.env.WHITELISTED_CHATS && !process.env.WHITELISTED_CHATS?.split(',').includes(chatId)) return;
-  // Check if from is not available.
-  if (!from) throw new Error('No Message Author found.');
+  // Check if the message author is not available.
+  if (!fromId) throw new Error('No Message Author found.');
   
   // If no text is available, check if a caption or document is attached.
   if (!text && message?.caption) text = message?.caption;
@@ -123,7 +124,7 @@ export async function onMessageReceived(ctx: Context) {
 
   } else {
     // Save message.
-    dataUtils.updateHistory(chatId, from, text);
+    dataUtils.updateHistory(chatId, fromId, fromUsername, fromFirstname, fromLastname, text);
     // Check if the message is too long.
     if (text.length > Number(process.env.MSG_LENGTH_LIMIT ?? 1000)) {
       // Generate a smart summary for the message.

@@ -52,7 +52,7 @@ describe('onMessageReceived', () => {
         message: {
           text: 'Hello world',
           chat: { id: 123 },
-          from: { id: 456, username: 'testuser' },
+          from: { id: 456, username: 'testuser', first_name: 'Test', last_name: 'User' },
           message_id: 1,
         },
       },
@@ -104,7 +104,10 @@ describe('onMessageReceived', () => {
     await onMessageReceived(mockCtx);
     expect(dataUtils.updateHistory).toHaveBeenCalledWith(
       '123',
+      '456',
       'testuser',
+      'Test',
+      'User',
       'Photo caption'
     );
   });
@@ -115,17 +118,23 @@ describe('onMessageReceived', () => {
     await onMessageReceived(mockCtx);
     expect(dataUtils.updateHistory).toHaveBeenCalledWith(
       '123',
+      '456',
       'testuser',
+      'Test',
+      'User',
       'document.pdf'
     );
   });
 
-  it('should use fromId when username is not available', async () => {
+  it('should save message without username when it is not available', async () => {
     mockCtx.update.message.from.username = undefined;
     await onMessageReceived(mockCtx);
     expect(dataUtils.updateHistory).toHaveBeenCalledWith(
       '123',
       '456',
+      undefined,
+      'Test',
+      'User',
       'Hello world'
     );
   });
@@ -134,7 +143,10 @@ describe('onMessageReceived', () => {
     await onMessageReceived(mockCtx);
     expect(dataUtils.updateHistory).toHaveBeenCalledWith(
       '123',
+      '456',
       'testuser',
+      'Test',
+      'User',
       'Hello world'
     );
   });
@@ -199,7 +211,10 @@ describe('onMessageReceived', () => {
     );
     expect(dataUtils.updateHistory).toHaveBeenCalledWith(
       '123',
+      '456',
       'testuser',
+      'Test',
+      'User',
       'Hello world\n\nMocked transcription'
     );
   });
@@ -219,7 +234,10 @@ describe('onMessageReceived', () => {
     expect(mockCtx.api.getFile).toHaveBeenCalledWith('voice-file-id');
     expect(dataUtils.updateHistory).toHaveBeenCalledWith(
       '123',
+      '456',
       'testuser',
+      'Test',
+      'User',
       'Mocked transcription'
     );
   });

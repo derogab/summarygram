@@ -51,7 +51,8 @@ export function close() {
  * @param message the message to update the history with.
  */
 export function updateHistory(chatId: string, username: string, message: string) {
-  getDb().prepare('INSERT INTO messages (chat_id, username, message, created_at) VALUES (?, ?, ?, ?)')
+  getDb()
+    .prepare('INSERT INTO messages (chat_id, username, message, created_at) VALUES (?, ?, ?, ?)')
     .run(chatId, username, message, Date.now());
 }
 
@@ -63,7 +64,8 @@ export function updateHistory(chatId: string, username: string, message: string)
  */
 export function getHistory(chatId: string): { username: string, message: string }[] {
   // Retrieve the recent history in insertion order. Older messages stay stored but are not returned.
-  const rows = getDb().prepare('SELECT username, message FROM messages WHERE chat_id = ? AND created_at >= ? ORDER BY rowid')
+  const rows = getDb()
+    .prepare('SELECT username, message FROM messages WHERE chat_id = ? AND created_at >= ? ORDER BY rowid')
     .all(chatId, Date.now() - HISTORY_WINDOW_MS);
   return rows.map(row => ({ username: row.username as string, message: row.message as string }));
 }

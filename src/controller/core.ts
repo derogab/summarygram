@@ -46,9 +46,6 @@ function isSTTConfigured(): boolean {
  * @returns the summary.
  */
 async function generate_summary(chatId: string) {
-  // Get history.
-  const history = dataUtils.getHistory(chatId);
-
   // Generate a smart reply using the AI based on instructions and chat history.
   const m = await generate([
     // Instructions for the AI.
@@ -57,7 +54,7 @@ async function generate_summary(chatId: string) {
     { role: 'system', content: "You will receive all messages of a chat and you will have to return a summary of the all conversation." },
     { role: 'system', content: "Use the same language used by the other people. Reply in simple text WITHOUT any special formatting characters (DO NOT use ** or _ please)." },
     // Chat history.
-    ...history.map(x => ({ role: 'user', content: '@' + x.username + ': ' + x.message }))
+    ...dataUtils.getHistory(chatId).map(x => ({ role: 'user', content: '@' + x.username + ': ' + x.message }))
   ]);
 
   // Return the summary.
@@ -155,10 +152,8 @@ export async function onMessageReceived(ctx: Context) {
  * @param bot the bot instance.
  */
 export async function onCronJob(bot: Bot) {
-  // Get all active chats.
-  const chatIds = dataUtils.getActiveChats();
   // For each chat, generate a summary.
-  for (const chatId of chatIds) {
+  for (const chatId of dataUtils.getActiveChats()) {
     // Check if the chat has history.
     const history = dataUtils.getHistory(chatId);
     if (history.length === 0) continue;

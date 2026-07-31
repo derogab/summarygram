@@ -22,7 +22,7 @@ npm run compile
 # Run the compiled bot
 npm run start
 
-# Docker deployment (includes Redis)
+# Docker deployment
 docker compose -f docker/docker-compose.yml up -d
 
 # Stop Docker deployment
@@ -37,11 +37,11 @@ The bot has a simple structure in `src/`:
 - **controller/core.ts**: Core business logic with two main handlers:
   - `onMessageReceived`: Handles incoming messages including:
     - Voice/audio message transcription (if STT configured)
-    - Stores messages in Redis
+    - Stores messages in SQLite
     - Responds to `/summary` command
     - Auto-summarizes long messages (>MSG_LENGTH_LIMIT chars)
   - `onCronJob`: Scheduled job that sends daily summaries to all active chats
-- **utils/data.ts**: Redis storage layer. Messages stored with key pattern `chat:{chatId}` and expire after 8 hours of inactivity. Format: `username###message`.
+- **utils/data.ts**: SQLite storage layer (built-in `node:sqlite`). Messages stored in a `messages` table keyed by chat id. All messages are kept, but summaries only consider those from the last 24 hours.
 
 ## Key Dependencies
 
@@ -49,7 +49,7 @@ The bot has a simple structure in `src/`:
 - **@derogab/llm-proxy**: Unified interface for multiple LLM providers (OpenAI, Ollama, Cloudflare, llama.cpp)
 - **@derogab/stt-proxy**: Unified interface for speech-to-text providers (whisper.cpp, Cloudflare AI Whisper)
 - **node-cron**: Scheduled summary jobs
-- **redis**: Message history persistence
+- **node:sqlite**: Message history persistence (built into Node.js, no external service)
 
 ## Configuration
 
@@ -76,7 +76,7 @@ All configuration via environment variables (see README.md for full list). Key o
 **Other:**
 - `CRON_SCHEDULE`: When to send auto-summaries (default: `59 23 * * *`), set to `never` to disable
 - `MSG_LENGTH_LIMIT`: Minimum chars to trigger auto-summarization (default: `1000`)
-- `REDIS_URL`: Redis connection string (default: `redis://localhost:6379`)
+- `SQLITE_PATH`: SQLite database file path (default: `summarygram.sqlite`)
 
 ## Conventional Commits
 

@@ -1,121 +1,107 @@
 // Dependencies.
-import { createClient, RedisClientType } from 'redis';
+import { DatabaseSync } from 'node:sqlite';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Constants.
-const KEY_PREFIX_CHAT = 'chat:';
+const HISTORY_WINDOW_MS = 1000 * 60 * 60 * 24; // Summaries only consider messages from the last 24 hours.
 
 // Class for the data storage.
 export default class Storage {
-  // The client for the Redis database.
-  client: RedisClientType | null;
+  // The handle for the SQLite database.
+  db: DatabaseSync | null;
 
   /**
    * Create a new instance of the Storage class.
    */
   constructor() {
-    this.client = null;
+    this.db = null;
   }
 
   /**
-   * Connect to the Redis database.
+   * Open the SQLite database file.
    */
   async connect() {
-    if (this.client) return; // If the client is already connected, return.
-    
-    const client = await createClient({
-      url: process.env.REDIS_URL || 'redis://localhost:6379',
-      socket: {
-        reconnectStrategy: (retries) => {
-          if (retries > 10) {
-            console.error('Redis connection failed after 10 retries');
-            return false;
-          }
-          console.log(`Redis connection retry ${retries}/10`);
-          return Math.min(retries * 100, 3000);
-        }
-      }
-    })
-    .on('error', err => console.log('Redis Client Error', err))
-    .connect();
+    if (this.db) return; // If the database is already open, return.
 
-    this.client = client as RedisClientType;
+    const dbPath = process.env.SQLITE_PATH || 'summarygram.sqlite';
+    // Ensure the parent directory exists (e.g. a mounted volume path).
+    if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(path.resolve(dbPath)), { recursive: true });
+
+    const db = new DatabaseSync(dbPath);
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS messages (
+        chat_id    TEXT    NOT NULL,
+        username   TEXT    NOT NULL,
+        message    TEXT    NOT NULL,
+        created_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages (chat_id);
+    `);
+
+    this.db = db;
   }
 
   /**
-   * Close the connection to the Redis database.
+   * Close the SQLite database.
    */
   async disconnect() {
-    await this.client?.disconnect();
-    this.client = null;
+    this.db?.close();
+    this.db = null;
   }
 
   /**
-   * Destroy the Redis database.
+   * Destroy the database content.
    */
   async destroy() {
-    await this.client?.flushAll();
+    this.db?.exec('DELETE FROM messages');
     await this.disconnect();
   }
 }
 
 /**
- * Generate a key from a chat id.
- * 
- * @param chatId the id of the chat.
- * @returns the generated key for the chat.
- */
-export function generateKeyChat(chatId: string | number) : string {
-  return KEY_PREFIX_CHAT + chatId;
-}
-
-/**
  * Update history in the storage.
- * 
+ *
  * @param storage storage instance.
- * @param key the key to update the history.
+ * @param chatId the id of the chat to update the history.
  * @param username the username of the user who sent the message.
  * @param message the message to update the history with.
  */
-export async function updateHistory(storage: Storage, key: string, username: string, message: string) {
+export async function updateHistory(storage: Storage, chatId: string, username: string, message: string) {
   // Connect storage if not connected.
   await storage.connect();
-  // Update the history.
-  await storage.client?.multi()
-    .rPush(key, username + '###' + message)
-    .expire(key, 60 * 60 * 8) // Expire in 8 hours.
-    .exec();
+  // Append the new message.
+  storage.db?.prepare('INSERT INTO messages (chat_id, username, message, created_at) VALUES (?, ?, ?, ?)')
+    .run(chatId, username, message, Date.now());
 }
 
 /**
  * Get the history from the storage.
- * 
+ *
  * @param storage storage instance.
- * @param key the key to get the history.
- * @returns the history messages and authors.
+ * @param chatId the id of the chat to get the history.
+ * @returns the history messages and authors from the last 24 hours.
  */
-export async function getHistory(storage: Storage, key: string): Promise<{ username: string, message: string }[]> {
+export async function getHistory(storage: Storage, chatId: string): Promise<{ username: string, message: string }[]> {
   // Connect storage if not connected.
   await storage.connect();
-  // Retrieve the history.
-  const history = await storage.client?.lRange(key, 0, -1) || [];
+  // Retrieve the recent history in insertion order. Older messages stay stored but are not returned.
+  const rows = storage.db?.prepare('SELECT username, message FROM messages WHERE chat_id = ? AND created_at >= ? ORDER BY rowid')
+    .all(chatId, Date.now() - HISTORY_WINDOW_MS) || [];
   // Generate the history messages and authors.
-  return history.map(msg => {
-    const [username, message] = msg.split('###');
-    return { username, message };
-  });
+  return rows.map(row => ({ username: row.username as string, message: row.message as string }));
 }
 
 /**
  * Get all active chats from the storage.
- * 
+ *
  * @param storage the storage instance.
  * @returns the active chats.
  */
 export async function getActiveChats(storage: Storage): Promise<string[]> {
   // Connect storage if not connected.
   await storage.connect();
-  // Retrieve the active chats from stored keys with the prefix.
-  const chats = await storage.client?.keys(KEY_PREFIX_CHAT + '*') || [];
-  // Return the active chats (keys without the prefix).
-  return chats.map(key => key.replace(KEY_PREFIX_CHAT, '')); // Remove the prefix from the key.
+  // Retrieve the active chats.
+  const rows = storage.db?.prepare('SELECT DISTINCT chat_id FROM messages').all() || [];
+  return rows.map(row => row.chat_id as string);
 }

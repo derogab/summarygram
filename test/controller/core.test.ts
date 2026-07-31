@@ -27,7 +27,7 @@ vi.mock('../../src/utils/data', async () => {
   return {
     ...originalModule,
     default: class MockStorage {
-      client = null;
+      db = null;
       connect = vi.fn();
       disconnect = vi.fn();
       destroy = vi.fn();
@@ -115,7 +115,7 @@ describe('onMessageReceived', () => {
     await onMessageReceived(mockStorage, mockCtx);
     expect(dataUtils.updateHistory).toHaveBeenCalledWith(
       mockStorage,
-      'chat:123',
+      '123',
       'testuser',
       'Photo caption'
     );
@@ -127,7 +127,7 @@ describe('onMessageReceived', () => {
     await onMessageReceived(mockStorage, mockCtx);
     expect(dataUtils.updateHistory).toHaveBeenCalledWith(
       mockStorage,
-      'chat:123',
+      '123',
       'testuser',
       'document.pdf'
     );
@@ -138,7 +138,7 @@ describe('onMessageReceived', () => {
     await onMessageReceived(mockStorage, mockCtx);
     expect(dataUtils.updateHistory).toHaveBeenCalledWith(
       mockStorage,
-      'chat:123',
+      '123',
       '456',
       'Hello world'
     );
@@ -148,7 +148,7 @@ describe('onMessageReceived', () => {
     await onMessageReceived(mockStorage, mockCtx);
     expect(dataUtils.updateHistory).toHaveBeenCalledWith(
       mockStorage,
-      'chat:123',
+      '123',
       'testuser',
       'Hello world'
     );
@@ -214,7 +214,7 @@ describe('onMessageReceived', () => {
     );
     expect(dataUtils.updateHistory).toHaveBeenCalledWith(
       mockStorage,
-      'chat:123',
+      '123',
       'testuser',
       'Hello world\n\nMocked transcription'
     );
@@ -235,7 +235,7 @@ describe('onMessageReceived', () => {
     expect(mockCtx.api.getFile).toHaveBeenCalledWith('voice-file-id');
     expect(dataUtils.updateHistory).toHaveBeenCalledWith(
       mockStorage,
-      'chat:123',
+      '123',
       'testuser',
       'Mocked transcription'
     );

@@ -41,14 +41,14 @@ function isSTTConfigured(): boolean {
 
 /**
  * Generate a summary of the chat history.
- * 
+ *
  * @param storage the storage instance.
- * @param key the key of the chat to generate the summary.
+ * @param chatId the id of the chat to generate the summary.
  * @returns the summary.
  */
-async function generate_summary(storage: Storage, key: string) {
+async function generate_summary(storage: Storage, chatId: string) {
   // Get history.
-  const history = await dataUtils.getHistory(storage, key);
+  const history = await dataUtils.getHistory(storage, chatId);
 
   // Generate a smart reply using the AI based on instructions and chat history.
   const m = await generate([
@@ -117,21 +117,18 @@ export async function onMessageReceived(storage: Storage, ctx: Context) {
   // Check if text is not yet available.
   if (!text) return;
   
-  // Generate key.
-  const key = dataUtils.generateKeyChat(chatId);
-
   // Check if the message is a special word to execute the summary.
   if (text?.startsWith('/summary')) {
     // Set the bot as typing.
     await ctx.api.sendChatAction(chatId, 'typing').catch(() => {});
     // Generate the summary.
-    const summary = await generate_summary(storage, key);
+    const summary = await generate_summary(storage, chatId);
     // Send the message.
     await ctx.reply(summary);
 
   } else {
     // Save message.
-    await dataUtils.updateHistory(storage, key, from, text);
+    await dataUtils.updateHistory(storage, chatId, from, text);
     // Check if the message is too long.
     if (text.length > Number(process.env.MSG_LENGTH_LIMIT ?? 1000)) {
       // Generate a smart summary for the message.
@@ -166,12 +163,12 @@ export async function onCronJob(storage: Storage, bot: Bot) {
   // For each chat, generate a summary.
   for (const chatId of chatIds) {
     // Check if the chat has history.
-    const history = await dataUtils.getHistory(storage, dataUtils.generateKeyChat(chatId));
+    const history = await dataUtils.getHistory(storage, chatId);
     if (history.length === 0) continue;
     // Set the bot as typing.
     await bot.api.sendChatAction(chatId, 'typing').catch(() => {});
     // Generate the summary.
-    const summary = await generate_summary(storage, dataUtils.generateKeyChat(chatId));
+    const summary = await generate_summary(storage, chatId);
     // Send the message.
     await bot.api.sendMessage(chatId, summary);
   }

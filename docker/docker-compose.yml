@@ -1,32 +1,11 @@
 name: summarygram
 
-volumes:
-  summarygram-data:
-    name: summarygram-data
-    driver: local
-
 networks:
   summarygram-network:
     name: summarygram-network
     driver: bridge
 
 services:
-  
-  redis:
-    image: redis:7-alpine
-    container_name: summarygram-redis
-    restart: unless-stopped
-    volumes:
-      - summarygram-data:/data
-    command: redis-server
-    networks:
-      - summarygram-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-      start_period: 10s
 
   app:
     build:
@@ -37,11 +16,9 @@ services:
     restart: unless-stopped
     volumes:
       - ../models:/usr/src/app/models
-    depends_on:
-      redis:
-        condition: service_healthy
+      - ../data:/data
     environment:
-      - REDIS_URL=redis://redis:6379
+      - SQLITE_PATH=/data/summarygram.sqlite
     env_file:
       - ../.env
     networks:

@@ -32,7 +32,7 @@ function getDb(): DatabaseSync {
       message        TEXT    NOT NULL,
       created_at     INTEGER NOT NULL
     );
-    CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages (chat_id);
+    CREATE INDEX IF NOT EXISTS idx_messages_chat_id_created_at ON messages (chat_id, created_at);
   `);
 
   return db;

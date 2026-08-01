@@ -34,6 +34,10 @@ function getDb(): DatabaseSync {
     );
     CREATE INDEX IF NOT EXISTS idx_messages_chat_id_created_at ON messages (chat_id, created_at);
   `);
+  // Refresh planner statistics: with them, the active-chats query skip-scans the index
+  // instead of scanning all retained history. Stats go stale until the next restart,
+  // which only costs falling back to the (slower but correct) full index scan.
+  db.exec('ANALYZE');
 
   return db;
 }

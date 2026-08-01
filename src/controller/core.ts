@@ -45,7 +45,7 @@ function isSTTConfigured(): boolean {
  * @param chatId the id of the chat to generate the summary.
  * @returns the summary.
  */
-async function generate_summary(chatId: string) {
+async function generateSummary(chatId: string) {
   // Generate a smart reply using the AI based on instructions and chat history.
   const m = await generate([
     // Instructions for the AI.
@@ -118,7 +118,7 @@ export async function onMessageReceived(ctx: Context) {
     // Set the bot as typing.
     await ctx.api.sendChatAction(chatId, 'typing').catch(() => {});
     // Generate the summary.
-    const summary = await generate_summary(chatId);
+    const summary = await generateSummary(chatId);
     // Send the message.
     await ctx.reply(summary);
 
@@ -161,7 +161,7 @@ export async function onCronJob(bot: Bot) {
     // Set the bot as typing.
     await bot.api.sendChatAction(chatId, 'typing').catch(() => {});
     // Generate the summary.
-    const summary = await generate_summary(chatId);
+    const summary = await generateSummary(chatId);
     // Send the message.
     await bot.api.sendMessage(chatId, summary);
   }

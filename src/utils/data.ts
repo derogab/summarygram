@@ -80,9 +80,11 @@ export function getHistory(chatId: string): { username: string, message: string 
 /**
  * Get all active chats from the storage.
  *
- * @returns the active chats.
+ * @returns the chats with messages from the last 24 hours.
  */
 export function getActiveChats(): string[] {
-  const rows = getDb().prepare('SELECT DISTINCT chat_id FROM messages').all();
+  const rows = getDb()
+    .prepare('SELECT DISTINCT chat_id FROM messages WHERE created_at >= ?')
+    .all(Date.now() - HISTORY_WINDOW_MS); // Chats whose messages are all older than the summary window are not active.
   return rows.map(row => row.chat_id as string);
 }

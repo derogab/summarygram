@@ -82,4 +82,15 @@ describe('getActiveChats', () => {
 
     expect(getActiveChats().sort()).toEqual(['-100456', '123']);
   });
+
+  it('should not return chats with only messages older than 24 hours', () => {
+    const now = Date.now();
+    vi.useFakeTimers();
+    vi.setSystemTime(now - 1000 * 60 * 60 * 25);
+    updateHistory('123', '1', 'alice', 'Alice', 'Smith', 'Old message');
+    vi.setSystemTime(now);
+    updateHistory('456', '2', 'bob', 'Bob', 'Jones', 'Recent message');
+
+    expect(getActiveChats()).toEqual(['456']);
+  });
 });

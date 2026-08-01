@@ -42,7 +42,7 @@
 | `STT_PROVIDER` | Explicit STT provider selection (optional). Valid options: `whisper.cpp`, `cloudflare`. If not set, auto-detects based on configured credentials (whisper.cpp prioritized if available). | - |
 | `WHISPER_CPP_MODEL_PATH` | Path to your Whisper GGML model file (optional, for local voice transcription with whisper.cpp) | - |
 | `CRON_SCHEDULE` | Cron schedule for automatic summaries, in [cron syntax](https://nodecron.com/cron-syntax.html) (optional). Set to `never` to disable. | 59 23 * * * |
-| `REDIS_URL` | URL for the Redis server (optional) | redis://localhost:6379 |
+| `SQLITE_PATH` | Path to the SQLite database file (optional) | summarygram.sqlite |
 | `MSG_LENGTH_LIMIT` | Minimum message length to trigger automatic summarization | 1000 |
 
 ### Setup
@@ -109,8 +109,7 @@ docker compose -f docker/docker-compose.yml down
 
 **Manual Summaries:**
 - Send `/summary` in the group chat.
-- The bot will analyze all available messages in the chat and provide a concise summary.
-- Message history is automatically cleared after 8 hours of inactivity.
+- The bot will analyze the messages from the last 24 hours and provide a concise summary.
 
 **Voice Message Transcription:**
 - Send voice messages or audio files to the group.

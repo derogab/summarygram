@@ -1,162 +1,96 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { generateKeyChat } from '../../src/utils/data';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { close, updateHistory, getHistory, getActiveChats } from '../../src/utils/data';
 
-// Mock redis to prevent actual connections
-vi.mock('redis', () => ({
-  createClient: vi.fn(() => ({
-    on: vi.fn().mockReturnThis(),
-    connect: vi.fn().mockResolvedValue(undefined),
-    disconnect: vi.fn().mockResolvedValue(undefined),
-    flushAll: vi.fn().mockResolvedValue(undefined),
-    multi: vi.fn(() => ({
-      rPush: vi.fn().mockReturnThis(),
-      expire: vi.fn().mockReturnThis(),
-      exec: vi.fn().mockResolvedValue([]),
-    })),
-    lRange: vi.fn().mockResolvedValue([]),
-    keys: vi.fn().mockResolvedValue([]),
-  })),
-}));
+// Use an in-memory SQLite database so tests never touch the filesystem.
+// Closing it between tests gives each test a fresh, empty database.
+process.env.SQLITE_PATH = ':memory:';
 
-import { createClient } from 'redis';
-import Storage, { updateHistory, getHistory, getActiveChats } from '../../src/utils/data';
-
-describe('generateKeyChat', () => {
-  it('should generate a key with chat: prefix for string chatId', () => {
-    expect(generateKeyChat('12345')).toBe('chat:12345');
-  });
-
-  it('should generate a key with chat: prefix for number chatId', () => {
-    expect(generateKeyChat(67890)).toBe('chat:67890');
-  });
-
-  it('should handle negative chat IDs (group chats)', () => {
-    expect(generateKeyChat('-100123456789')).toBe('chat:-100123456789');
-  });
-
-  it('should handle empty string', () => {
-    expect(generateKeyChat('')).toBe('chat:');
-  });
+afterEach(() => {
+  vi.useRealTimers();
+  close();
 });
 
-describe('Storage', () => {
-  let storage: Storage;
-
-  beforeEach(() => {
-    storage = new Storage();
+describe('history', () => {
+  it('should return empty history for an unknown chat', () => {
+    expect(getHistory('unknown')).toEqual([]);
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+  it('should store and retrieve messages in insertion order', () => {
+    updateHistory('123', '1', 'alice', 'Alice', 'Smith','Hello world');
+    updateHistory('123', '2', 'bob', 'Bob', 'Jones','How are you?');
 
-  describe('constructor', () => {
-    it('should initialize with null client', () => {
-      expect(storage.client).toBeNull();
-    });
-  });
-
-  describe('connect', () => {
-    it('should connect to Redis', async () => {
-      await storage.connect();
-      expect(storage.client).not.toBeNull();
-    });
-
-    it('should not reconnect if already connected', async () => {
-      await storage.connect();
-      const firstClient = storage.client;
-      await storage.connect();
-      expect(storage.client).toBe(firstClient);
-    });
-
-    it('should configure bounded Redis reconnect retries', async () => {
-      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      await storage.connect();
-      const createClientMock = vi.mocked(createClient);
-      const options = createClientMock.mock.calls[createClientMock.mock.calls.length - 1][0] as any;
-
-      expect(options.socket.reconnectStrategy(3)).toBe(300);
-      expect(options.socket.reconnectStrategy(11)).toBe(false);
-      expect(logSpy).toHaveBeenCalledWith('Redis connection retry 3/10');
-      expect(errorSpy).toHaveBeenCalledWith('Redis connection failed after 10 retries');
-    });
-  });
-
-  describe('disconnect', () => {
-    it('should disconnect and set client to null', async () => {
-      await storage.connect();
-      await storage.disconnect();
-      expect(storage.client).toBeNull();
-    });
-
-    it('should handle disconnect when not connected', async () => {
-      await expect(storage.disconnect()).resolves.not.toThrow();
-    });
-  });
-
-  describe('destroy', () => {
-    it('should flush all and disconnect', async () => {
-      await storage.connect();
-      await storage.destroy();
-      expect(storage.client).toBeNull();
-    });
-  });
-});
-
-describe('updateHistory', () => {
-  it('should not throw when called with valid params', async () => {
-    const storage = new Storage();
-    await expect(
-      updateHistory(storage, 'chat:123', 'testuser', 'Hello world')
-    ).resolves.not.toThrow();
-  });
-});
-
-describe('getHistory', () => {
-  it('should return array when called', async () => {
-    const storage = new Storage();
-    const history = await getHistory(storage, 'chat:123');
-    expect(Array.isArray(history)).toBe(true);
-  });
-
-  it('should parse stored username and message entries', async () => {
-    const storage = new Storage();
-    storage.client = {
-      lRange: vi.fn().mockResolvedValue([
-        'alice###Hello world',
-        'bob###How are you?',
-      ]),
-    } as any;
-
-    const history = await getHistory(storage, 'chat:123');
-
-    expect(history).toEqual([
-      { username: 'alice', message: 'Hello world' },
-      { username: 'bob', message: 'How are you?' },
+    expect(getHistory('123')).toEqual([
+      { author:'@alice', message: 'Hello world' },
+      { author:'@bob', message: 'How are you?' },
     ]);
+  });
+
+  it('should keep chats separate', () => {
+    updateHistory('123', '1', 'alice', 'Alice', 'Smith','Hello');
+    updateHistory('456', '2', 'bob', 'Bob', 'Jones', 'Hi');
+
+    expect(getHistory('123')).toEqual([{ author:'@alice', message: 'Hello' }]);
+  });
+
+  it('should accept messages without user names', () => {
+    updateHistory('123', '1', 'alice', undefined, undefined, 'Hello');
+
+    expect(getHistory('123')).toEqual([{ author:'@alice', message: 'Hello' }]);
+  });
+
+  it('should fall back to first name or user id when username is missing', () => {
+    updateHistory('123', '1', undefined, 'Alice', undefined, 'Hello');
+    updateHistory('123', '2', undefined, undefined, undefined, 'Hi');
+
+    expect(getHistory('123')).toEqual([
+      { author:'Alice', message: 'Hello' },
+      { author:'2', message: 'Hi' },
+    ]);
+  });
+
+  it('should preserve messages containing the ### separator', () => {
+    updateHistory('123', '1', 'alice', 'Alice', 'Smith','a###b###c');
+
+    expect(getHistory('123')).toEqual([{ author:'@alice', message: 'a###b###c' }]);
+  });
+
+  it('should only return messages from the last 24 hours, without deleting older ones', () => {
+    const now = Date.now();
+    // Store a message 25 hours in the past.
+    vi.useFakeTimers();
+    vi.setSystemTime(now - 1000 * 60 * 60 * 25);
+    updateHistory('123', '1', 'alice', 'Alice', 'Smith','Old message');
+    vi.setSystemTime(now);
+    updateHistory('123', '2', 'bob', 'Bob', 'Jones','Recent message');
+
+    expect(getHistory('123')).toEqual([{ author:'@bob', message: 'Recent message' }]);
+
+    // The old message is still stored: it is visible from within its own 24-hour window.
+    vi.setSystemTime(now - 1000 * 60 * 60 * 24);
+    expect(getHistory('123')).toContainEqual({ author:'@alice', message: 'Old message' });
   });
 });
 
 describe('getActiveChats', () => {
-  it('should return array when called', async () => {
-    const storage = new Storage();
-    const chats = await getActiveChats(storage);
-    expect(Array.isArray(chats)).toBe(true);
+  it('should return empty array when no chats are active', () => {
+    expect(getActiveChats()).toEqual([]);
   });
 
-  it('should remove the chat key prefix from active chat IDs', async () => {
-    const storage = new Storage();
-    storage.client = {
-      keys: vi.fn().mockResolvedValue([
-        'chat:123',
-        'chat:-100456',
-      ]),
-    } as any;
+  it('should return the ids of chats with history', () => {
+    updateHistory('123', '1', 'alice', 'Alice', 'Smith','Hello');
+    updateHistory('-100456', '2', 'bob', 'Bob', 'Jones', 'Hi');
 
-    const chats = await getActiveChats(storage);
+    expect(getActiveChats().sort()).toEqual(['-100456', '123']);
+  });
 
-    expect(chats).toEqual(['123', '-100456']);
+  it('should not return chats with only messages older than 24 hours', () => {
+    const now = Date.now();
+    vi.useFakeTimers();
+    vi.setSystemTime(now - 1000 * 60 * 60 * 25);
+    updateHistory('123', '1', 'alice', 'Alice', 'Smith', 'Old message');
+    vi.setSystemTime(now);
+    updateHistory('456', '2', 'bob', 'Bob', 'Jones', 'Recent message');
+
+    expect(getActiveChats()).toEqual(['456']);
   });
 });

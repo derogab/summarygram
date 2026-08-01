@@ -2,7 +2,7 @@ import { Bot, Context } from "grammy";
 import { generate } from '@derogab/llm-proxy';
 import { transcribe } from '@derogab/stt-proxy';
 import * as fs from 'fs';
-import Storage, * as dataUtils from "../utils/data";
+import * as dataUtils from "../utils/data";
 
 /**
  * Check if STT (Speech-to-Text) is configured and available.
@@ -41,15 +41,11 @@ function isSTTConfigured(): boolean {
 
 /**
  * Generate a summary of the chat history.
- * 
- * @param storage the storage instance.
- * @param key the key of the chat to generate the summary.
+ *
+ * @param chatId the id of the chat to generate the summary.
  * @returns the summary.
  */
-async function generate_summary(storage: Storage, key: string) {
-  // Get history.
-  const history = await dataUtils.getHistory(storage, key);
-
+async function generateSummary(chatId: string) {
   // Generate a smart reply using the AI based on instructions and chat history.
   const m = await generate([
     // Instructions for the AI.
@@ -58,7 +54,7 @@ async function generate_summary(storage: Storage, key: string) {
     { role: 'system', content: "You will receive all messages of a chat and you will have to return a summary of the all conversation." },
     { role: 'system', content: "Use the same language used by the other people. Reply in simple text WITHOUT any special formatting characters (DO NOT use ** or _ please)." },
     // Chat history.
-    ...history.map(x => ({ role: 'user', content: '@' + x.username + ': ' + x.message }))
+    ...dataUtils.getHistory(chatId).map(x => ({ role: 'user', content: x.author + ': ' + x.message }))
   ]);
 
   // Return the summary.
@@ -67,25 +63,25 @@ async function generate_summary(storage: Storage, key: string) {
 
 /**
  * Function to be called when a message is received.
- * 
- * @param storage the storage instance.
+ *
  * @param ctx the context of the telegram message.
  */
-export async function onMessageReceived(storage: Storage, ctx: Context) {
+export async function onMessageReceived(ctx: Context) {
   // Get the message from the context and extract info.
   const message = ctx.update.message;
   let text = message?.text;
   const chatId = message?.chat?.id ? ''+message?.chat?.id : undefined;
   const fromId = message?.from?.id ? ''+message?.from?.id : undefined;
   const fromUsername = message?.from?.username ? ''+message?.from?.username : undefined;
-  const from = fromUsername || fromId;
+  const fromFirstname = message?.from?.first_name ? ''+message?.from?.first_name : undefined;
+  const fromLastname = message?.from?.last_name ? ''+message?.from?.last_name : undefined;
 
   // Check if chatId is not available.
   if (!chatId) throw new Error('No Chat found.');
   // Check if the chat is whitelisted.
   if (process.env.WHITELISTED_CHATS && !process.env.WHITELISTED_CHATS?.split(',').includes(chatId)) return;
-  // Check if from is not available.
-  if (!from) throw new Error('No Message Author found.');
+  // Check if the message author is not available.
+  if (!fromId) throw new Error('No Message Author found.');
   
   // If no text is available, check if a caption or document is attached.
   if (!text && message?.caption) text = message?.caption;
@@ -117,21 +113,18 @@ export async function onMessageReceived(storage: Storage, ctx: Context) {
   // Check if text is not yet available.
   if (!text) return;
   
-  // Generate key.
-  const key = dataUtils.generateKeyChat(chatId);
-
   // Check if the message is a special word to execute the summary.
   if (text?.startsWith('/summary')) {
     // Set the bot as typing.
     await ctx.api.sendChatAction(chatId, 'typing').catch(() => {});
     // Generate the summary.
-    const summary = await generate_summary(storage, key);
+    const summary = await generateSummary(chatId);
     // Send the message.
     await ctx.reply(summary);
 
   } else {
     // Save message.
-    await dataUtils.updateHistory(storage, key, from, text);
+    dataUtils.updateHistory(chatId, fromId, fromUsername, fromFirstname, fromLastname, text);
     // Check if the message is too long.
     if (text.length > Number(process.env.MSG_LENGTH_LIMIT ?? 1000)) {
       // Generate a smart summary for the message.
@@ -156,22 +149,19 @@ export async function onMessageReceived(storage: Storage, ctx: Context) {
 
 /**
  * Function to be called when a cron job is triggered.
- * 
- * @param storage the storage instance.
+ *
  * @param bot the bot instance.
  */
-export async function onCronJob(storage: Storage, bot: Bot) {
-  // Get all active chats.
-  const chatIds = await dataUtils.getActiveChats(storage);
+export async function onCronJob(bot: Bot) {
   // For each chat, generate a summary.
-  for (const chatId of chatIds) {
+  for (const chatId of dataUtils.getActiveChats()) {
     // Check if the chat has history.
-    const history = await dataUtils.getHistory(storage, dataUtils.generateKeyChat(chatId));
+    const history = dataUtils.getHistory(chatId);
     if (history.length === 0) continue;
     // Set the bot as typing.
     await bot.api.sendChatAction(chatId, 'typing').catch(() => {});
     // Generate the summary.
-    const summary = await generate_summary(storage, dataUtils.generateKeyChat(chatId));
+    const summary = await generateSummary(chatId);
     // Send the message.
     await bot.api.sendMessage(chatId, summary);
   }

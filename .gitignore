@@ -141,3 +141,7 @@ vite.config.ts.timestamp-*
 # Model files
 models/*.gguf
 models/*.bin
+
+# SQLite database
+data/
+*.sqlite

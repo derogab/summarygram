@@ -22,29 +22,17 @@ vi.mock('fs', async () => {
 });
 
 // Mock data utils
-vi.mock('../../src/utils/data', async () => {
-  const originalModule = await vi.importActual('../../src/utils/data');
-  return {
-    ...originalModule,
-    default: class MockStorage {
-      client = null;
-      connect = vi.fn();
-      disconnect = vi.fn();
-      destroy = vi.fn();
-    },
-    getHistory: vi.fn().mockResolvedValue([]),
-    updateHistory: vi.fn().mockResolvedValue(undefined),
-    getActiveChats: vi.fn().mockResolvedValue([]),
-  };
-});
+vi.mock('../../src/utils/data', () => ({
+  getHistory: vi.fn().mockReturnValue([]),
+  updateHistory: vi.fn(),
+  getActiveChats: vi.fn().mockReturnValue([]),
+}));
 
-import Storage from '../../src/utils/data';
 import * as dataUtils from '../../src/utils/data';
 import { generate } from '@derogab/llm-proxy';
 import { transcribe } from '@derogab/stt-proxy';
 
 describe('onMessageReceived', () => {
-  let mockStorage: Storage;
   let mockCtx: any;
 
   beforeEach(() => {
@@ -56,14 +44,15 @@ describe('onMessageReceived', () => {
     delete process.env.CLOUDFLARE_ACCOUNT_ID;
     delete process.env.CLOUDFLARE_AUTH_KEY;
     (fs.existsSync as Mock).mockReturnValue(false);
+    (dataUtils.getHistory as Mock).mockReturnValue([]);
+    (dataUtils.getActiveChats as Mock).mockReturnValue([]);
 
-    mockStorage = new Storage();
     mockCtx = {
       update: {
         message: {
           text: 'Hello world',
           chat: { id: 123 },
-          from: { id: 456, username: 'testuser' },
+          from: { id: 456, username: 'testuser', first_name: 'Test', last_name: 'User' },
           message_id: 1,
         },
       },
@@ -83,40 +72,42 @@ describe('onMessageReceived', () => {
 
   it('should throw error when chatId is not available', async () => {
     mockCtx.update.message.chat = undefined;
-    await expect(onMessageReceived(mockStorage, mockCtx)).rejects.toThrow('No Chat found.');
+    await expect(onMessageReceived(mockCtx)).rejects.toThrow('No Chat found.');
   });
 
   it('should throw error when from is not available', async () => {
     mockCtx.update.message.from = undefined;
-    await expect(onMessageReceived(mockStorage, mockCtx)).rejects.toThrow('No Message Author found.');
+    await expect(onMessageReceived(mockCtx)).rejects.toThrow('No Message Author found.');
   });
 
   it('should return early when chat is not whitelisted', async () => {
     process.env.WHITELISTED_CHATS = '999,888';
-    await onMessageReceived(mockStorage, mockCtx);
+    await onMessageReceived(mockCtx);
     expect(dataUtils.updateHistory).not.toHaveBeenCalled();
   });
 
   it('should process message when chat is whitelisted', async () => {
     process.env.WHITELISTED_CHATS = '123,456';
-    await onMessageReceived(mockStorage, mockCtx);
+    await onMessageReceived(mockCtx);
     expect(dataUtils.updateHistory).toHaveBeenCalled();
   });
 
   it('should return early when text is not available and no caption/document', async () => {
     mockCtx.update.message.text = undefined;
-    await onMessageReceived(mockStorage, mockCtx);
+    await onMessageReceived(mockCtx);
     expect(dataUtils.updateHistory).not.toHaveBeenCalled();
   });
 
   it('should use caption when text is not available', async () => {
     mockCtx.update.message.text = undefined;
     mockCtx.update.message.caption = 'Photo caption';
-    await onMessageReceived(mockStorage, mockCtx);
+    await onMessageReceived(mockCtx);
     expect(dataUtils.updateHistory).toHaveBeenCalledWith(
-      mockStorage,
-      'chat:123',
+      '123',
+      '456',
       'testuser',
+      'Test',
+      'User',
       'Photo caption'
     );
   });
@@ -124,44 +115,50 @@ describe('onMessageReceived', () => {
   it('should use document filename when text and caption are not available', async () => {
     mockCtx.update.message.text = undefined;
     mockCtx.update.message.document = { file_name: 'document.pdf' };
-    await onMessageReceived(mockStorage, mockCtx);
+    await onMessageReceived(mockCtx);
     expect(dataUtils.updateHistory).toHaveBeenCalledWith(
-      mockStorage,
-      'chat:123',
+      '123',
+      '456',
       'testuser',
+      'Test',
+      'User',
       'document.pdf'
     );
   });
 
-  it('should use fromId when username is not available', async () => {
+  it('should save message without username when it is not available', async () => {
     mockCtx.update.message.from.username = undefined;
-    await onMessageReceived(mockStorage, mockCtx);
+    await onMessageReceived(mockCtx);
     expect(dataUtils.updateHistory).toHaveBeenCalledWith(
-      mockStorage,
-      'chat:123',
+      '123',
       '456',
+      undefined,
+      'Test',
+      'User',
       'Hello world'
     );
   });
 
   it('should save regular message to history', async () => {
-    await onMessageReceived(mockStorage, mockCtx);
+    await onMessageReceived(mockCtx);
     expect(dataUtils.updateHistory).toHaveBeenCalledWith(
-      mockStorage,
-      'chat:123',
+      '123',
+      '456',
       'testuser',
+      'Test',
+      'User',
       'Hello world'
     );
   });
 
   it('should generate and send summary on /summary command', async () => {
     mockCtx.update.message.text = '/summary';
-    (dataUtils.getHistory as Mock).mockResolvedValue([
-      { username: 'user1', message: 'Hello' },
-      { username: 'user2', message: 'World' },
+    (dataUtils.getHistory as Mock).mockReturnValue([
+      { author: '@user1', message: 'Hello' },
+      { author: '@user2', message: 'World' },
     ]);
 
-    await onMessageReceived(mockStorage, mockCtx);
+    await onMessageReceived(mockCtx);
 
     expect(mockCtx.api.sendChatAction).toHaveBeenCalledWith('123', 'typing');
     expect(generate).toHaveBeenCalled();
@@ -172,7 +169,7 @@ describe('onMessageReceived', () => {
     process.env.MSG_LENGTH_LIMIT = '10';
     mockCtx.update.message.text = 'This is a very long message that exceeds the limit';
 
-    await onMessageReceived(mockStorage, mockCtx);
+    await onMessageReceived(mockCtx);
 
     expect(dataUtils.updateHistory).toHaveBeenCalled();
     expect(generate).toHaveBeenCalled();
@@ -186,7 +183,7 @@ describe('onMessageReceived', () => {
     process.env.MSG_LENGTH_LIMIT = '1000';
     mockCtx.update.message.text = 'Short message';
 
-    await onMessageReceived(mockStorage, mockCtx);
+    await onMessageReceived(mockCtx);
 
     expect(dataUtils.updateHistory).toHaveBeenCalled();
     expect(generate).not.toHaveBeenCalled();
@@ -203,7 +200,7 @@ describe('onMessageReceived', () => {
       arrayBuffer: vi.fn().mockResolvedValue(arrayBuffer),
     }));
 
-    await onMessageReceived(mockStorage, mockCtx);
+    await onMessageReceived(mockCtx);
 
     expect(mockCtx.api.getFile).toHaveBeenCalledWith('audio-file-id');
     expect(fetch).toHaveBeenCalledWith('https://api.telegram.org/file/botbot-token/voice/file.ogg');
@@ -213,9 +210,11 @@ describe('onMessageReceived', () => {
       { reply_to_message_id: 1 }
     );
     expect(dataUtils.updateHistory).toHaveBeenCalledWith(
-      mockStorage,
-      'chat:123',
+      '123',
+      '456',
       'testuser',
+      'Test',
+      'User',
       'Hello world\n\nMocked transcription'
     );
   });
@@ -230,13 +229,15 @@ describe('onMessageReceived', () => {
       arrayBuffer: vi.fn().mockResolvedValue(new Uint8Array([4, 5, 6]).buffer),
     }));
 
-    await onMessageReceived(mockStorage, mockCtx);
+    await onMessageReceived(mockCtx);
 
     expect(mockCtx.api.getFile).toHaveBeenCalledWith('voice-file-id');
     expect(dataUtils.updateHistory).toHaveBeenCalledWith(
-      mockStorage,
-      'chat:123',
+      '123',
+      '456',
       'testuser',
+      'Test',
+      'User',
       'Mocked transcription'
     );
   });
@@ -245,7 +246,7 @@ describe('onMessageReceived', () => {
     mockCtx.update.message.text = undefined;
     mockCtx.update.message.voice = { file_id: 'voice-file-id' };
 
-    await onMessageReceived(mockStorage, mockCtx);
+    await onMessageReceived(mockCtx);
 
     expect(mockCtx.api.getFile).not.toHaveBeenCalled();
     expect(transcribe).not.toHaveBeenCalled();
@@ -254,13 +255,11 @@ describe('onMessageReceived', () => {
 });
 
 describe('onCronJob', () => {
-  let mockStorage: Storage;
   let mockBot: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockStorage = new Storage();
     mockBot = {
       api: {
         sendChatAction: vi.fn().mockResolvedValue(undefined),
@@ -270,27 +269,27 @@ describe('onCronJob', () => {
   });
 
   it('should do nothing when no active chats', async () => {
-    (dataUtils.getActiveChats as Mock).mockResolvedValue([]);
-    await onCronJob(mockStorage, mockBot);
+    (dataUtils.getActiveChats as Mock).mockReturnValue([]);
+    await onCronJob(mockBot);
     expect(mockBot.api.sendMessage).not.toHaveBeenCalled();
   });
 
   it('should skip chats with no history', async () => {
-    (dataUtils.getActiveChats as Mock).mockResolvedValue(['123']);
-    (dataUtils.getHistory as Mock).mockResolvedValue([]);
+    (dataUtils.getActiveChats as Mock).mockReturnValue(['123']);
+    (dataUtils.getHistory as Mock).mockReturnValue([]);
 
-    await onCronJob(mockStorage, mockBot);
+    await onCronJob(mockBot);
 
     expect(mockBot.api.sendMessage).not.toHaveBeenCalled();
   });
 
   it('should send summary to active chats with history', async () => {
-    (dataUtils.getActiveChats as Mock).mockResolvedValue(['123', '456']);
-    (dataUtils.getHistory as Mock).mockResolvedValue([
-      { username: 'user1', message: 'Hello' },
+    (dataUtils.getActiveChats as Mock).mockReturnValue(['123', '456']);
+    (dataUtils.getHistory as Mock).mockReturnValue([
+      { author: '@user1', message: 'Hello' },
     ]);
 
-    await onCronJob(mockStorage, mockBot);
+    await onCronJob(mockBot);
 
     expect(mockBot.api.sendChatAction).toHaveBeenCalledTimes(2);
     expect(mockBot.api.sendMessage).toHaveBeenCalledTimes(2);

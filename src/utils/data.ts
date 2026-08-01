@@ -1,121 +1,95 @@
 // Dependencies.
-import { createClient, RedisClientType } from 'redis';
+import { DatabaseSync } from 'node:sqlite';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Constants.
-const KEY_PREFIX_CHAT = 'chat:';
+const HISTORY_WINDOW_MS = 1000 * 60 * 60 * 24; // Summaries only consider messages from the last 24 hours.
 
-// Class for the data storage.
-export default class Storage {
-  // The client for the Redis database.
-  client: RedisClientType | null;
+// The handle for the SQLite database, opened on first use.
+let db: DatabaseSync | null = null;
 
-  /**
-   * Create a new instance of the Storage class.
-   */
-  constructor() {
-    this.client = null;
-  }
+/**
+ * Get the SQLite database, opening the file on first use.
+ *
+ * @returns the database handle.
+ */
+function getDb(): DatabaseSync {
+  if (db) return db;
 
-  /**
-   * Connect to the Redis database.
-   */
-  async connect() {
-    if (this.client) return; // If the client is already connected, return.
-    
-    const client = await createClient({
-      url: process.env.REDIS_URL || 'redis://localhost:6379',
-      socket: {
-        reconnectStrategy: (retries) => {
-          if (retries > 10) {
-            console.error('Redis connection failed after 10 retries');
-            return false;
-          }
-          console.log(`Redis connection retry ${retries}/10`);
-          return Math.min(retries * 100, 3000);
-        }
-      }
-    })
-    .on('error', err => console.log('Redis Client Error', err))
-    .connect();
+  const dbPath = process.env.SQLITE_PATH || 'summarygram.sqlite';
+  // Ensure the parent directory exists (e.g. a mounted volume path).
+  if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(path.resolve(dbPath)), { recursive: true });
 
-    this.client = client as RedisClientType;
-  }
+  db = new DatabaseSync(dbPath);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS messages (
+      chat_id        TEXT    NOT NULL,
+      user_id        TEXT    NOT NULL,
+      username       TEXT,
+      user_firstname TEXT,
+      user_lastname  TEXT,
+      message        TEXT    NOT NULL,
+      created_at     INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_messages_chat_id_created_at ON messages (chat_id, created_at);
+  `);
+  // Refresh planner statistics: with them, the active-chats query skip-scans the index
+  // instead of scanning all retained history. analysis_limit bounds the sampling so
+  // startup cost stays constant no matter how much history is retained.
+  db.exec('PRAGMA analysis_limit=1000; ANALYZE;');
 
-  /**
-   * Close the connection to the Redis database.
-   */
-  async disconnect() {
-    await this.client?.disconnect();
-    this.client = null;
-  }
-
-  /**
-   * Destroy the Redis database.
-   */
-  async destroy() {
-    await this.client?.flushAll();
-    await this.disconnect();
-  }
+  return db;
 }
 
 /**
- * Generate a key from a chat id.
- * 
- * @param chatId the id of the chat.
- * @returns the generated key for the chat.
+ * Close the SQLite database. It will be reopened on next use.
  */
-export function generateKeyChat(chatId: string | number) : string {
-  return KEY_PREFIX_CHAT + chatId;
+export function close() {
+  db?.close();
+  db = null;
 }
 
 /**
  * Update history in the storage.
- * 
- * @param storage storage instance.
- * @param key the key to update the history.
- * @param username the username of the user who sent the message.
+ *
+ * @param chatId the id of the chat to update the history.
+ * @param userId the id of the user who sent the message.
+ * @param username the username of the user who sent the message, if available.
+ * @param userFirstname the first name of the user who sent the message, if available.
+ * @param userLastname the last name of the user who sent the message, if available.
  * @param message the message to update the history with.
  */
-export async function updateHistory(storage: Storage, key: string, username: string, message: string) {
-  // Connect storage if not connected.
-  await storage.connect();
-  // Update the history.
-  await storage.client?.multi()
-    .rPush(key, username + '###' + message)
-    .expire(key, 60 * 60 * 8) // Expire in 8 hours.
-    .exec();
+export function updateHistory(chatId: string, userId: string, username: string | undefined, userFirstname: string | undefined, userLastname: string | undefined, message: string) {
+  getDb()
+    .prepare('INSERT INTO messages (chat_id, user_id, username, user_firstname, user_lastname, message, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(chatId, userId, username ?? null, userFirstname ?? null, userLastname ?? null, message, Date.now());
 }
 
 /**
  * Get the history from the storage.
- * 
- * @param storage storage instance.
- * @param key the key to get the history.
- * @returns the history messages and authors.
+ *
+ * @param chatId the id of the chat to get the history.
+ * @returns the history messages and their author display names from the last 24 hours.
  */
-export async function getHistory(storage: Storage, key: string): Promise<{ username: string, message: string }[]> {
-  // Connect storage if not connected.
-  await storage.connect();
-  // Retrieve the history.
-  const history = await storage.client?.lRange(key, 0, -1) || [];
-  // Generate the history messages and authors.
-  return history.map(msg => {
-    const [username, message] = msg.split('###');
-    return { username, message };
-  });
+export function getHistory(chatId: string): { author: string, message: string }[] {
+  // Retrieve the recent history in insertion order. Older messages stay stored but are not returned.
+  // Authors are displayed as @username; those without one fall back to their plain
+  // first name, or user id as a last resort ('@' || NULL is NULL, skipping the prefix).
+  const rows = getDb()
+    .prepare("SELECT COALESCE('@' || username, user_firstname, user_id) AS author, message FROM messages WHERE chat_id = ? AND created_at >= ? ORDER BY rowid")
+    .all(chatId, Date.now() - HISTORY_WINDOW_MS);
+  return rows.map(row => ({ author: row.author as string, message: row.message as string }));
 }
 
 /**
  * Get all active chats from the storage.
- * 
- * @param storage the storage instance.
- * @returns the active chats.
+ *
+ * @returns the chats with messages from the last 24 hours.
  */
-export async function getActiveChats(storage: Storage): Promise<string[]> {
-  // Connect storage if not connected.
-  await storage.connect();
-  // Retrieve the active chats from stored keys with the prefix.
-  const chats = await storage.client?.keys(KEY_PREFIX_CHAT + '*') || [];
-  // Return the active chats (keys without the prefix).
-  return chats.map(key => key.replace(KEY_PREFIX_CHAT, '')); // Remove the prefix from the key.
+export function getActiveChats(): string[] {
+  const rows = getDb()
+    .prepare('SELECT DISTINCT chat_id FROM messages WHERE created_at >= ?')
+    .all(Date.now() - HISTORY_WINDOW_MS); // Chats whose messages are all older than the summary window are not active.
+  return rows.map(row => row.chat_id as string);
 }

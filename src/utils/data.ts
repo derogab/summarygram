@@ -70,15 +70,16 @@ export function updateHistory(chatId: string, userId: string, username: string |
  * Get the history from the storage.
  *
  * @param chatId the id of the chat to get the history.
- * @returns the history messages and authors from the last 24 hours.
+ * @returns the history messages and their author display names from the last 24 hours.
  */
-export function getHistory(chatId: string): { username: string, message: string }[] {
+export function getHistory(chatId: string): { author: string, message: string }[] {
   // Retrieve the recent history in insertion order. Older messages stay stored but are not returned.
-  // Users without a username are displayed by first name, or user id as a last resort.
+  // Authors are displayed as @username; those without one fall back to their plain
+  // first name, or user id as a last resort ('@' || NULL is NULL, skipping the prefix).
   const rows = getDb()
-    .prepare('SELECT COALESCE(username, user_firstname, user_id) AS username, message FROM messages WHERE chat_id = ? AND created_at >= ? ORDER BY rowid')
+    .prepare("SELECT COALESCE('@' || username, user_firstname, user_id) AS author, message FROM messages WHERE chat_id = ? AND created_at >= ? ORDER BY rowid")
     .all(chatId, Date.now() - HISTORY_WINDOW_MS);
-  return rows.map(row => ({ username: row.username as string, message: row.message as string }));
+  return rows.map(row => ({ author: row.author as string, message: row.message as string }));
 }
 
 /**

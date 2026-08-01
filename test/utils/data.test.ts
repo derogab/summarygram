@@ -20,8 +20,8 @@ describe('history', () => {
     updateHistory('123', '2', 'bob', 'Bob', 'Jones','How are you?');
 
     expect(getHistory('123')).toEqual([
-      { username: 'alice', message: 'Hello world' },
-      { username: 'bob', message: 'How are you?' },
+      { author:'@alice', message: 'Hello world' },
+      { author:'@bob', message: 'How are you?' },
     ]);
   });
 
@@ -29,13 +29,13 @@ describe('history', () => {
     updateHistory('123', '1', 'alice', 'Alice', 'Smith','Hello');
     updateHistory('456', '2', 'bob', 'Bob', 'Jones', 'Hi');
 
-    expect(getHistory('123')).toEqual([{ username: 'alice', message: 'Hello' }]);
+    expect(getHistory('123')).toEqual([{ author:'@alice', message: 'Hello' }]);
   });
 
   it('should accept messages without user names', () => {
     updateHistory('123', '1', 'alice', undefined, undefined, 'Hello');
 
-    expect(getHistory('123')).toEqual([{ username: 'alice', message: 'Hello' }]);
+    expect(getHistory('123')).toEqual([{ author:'@alice', message: 'Hello' }]);
   });
 
   it('should fall back to first name or user id when username is missing', () => {
@@ -43,15 +43,15 @@ describe('history', () => {
     updateHistory('123', '2', undefined, undefined, undefined, 'Hi');
 
     expect(getHistory('123')).toEqual([
-      { username: 'Alice', message: 'Hello' },
-      { username: '2', message: 'Hi' },
+      { author:'Alice', message: 'Hello' },
+      { author:'2', message: 'Hi' },
     ]);
   });
 
   it('should preserve messages containing the ### separator', () => {
     updateHistory('123', '1', 'alice', 'Alice', 'Smith','a###b###c');
 
-    expect(getHistory('123')).toEqual([{ username: 'alice', message: 'a###b###c' }]);
+    expect(getHistory('123')).toEqual([{ author:'@alice', message: 'a###b###c' }]);
   });
 
   it('should only return messages from the last 24 hours, without deleting older ones', () => {
@@ -63,11 +63,11 @@ describe('history', () => {
     vi.setSystemTime(now);
     updateHistory('123', '2', 'bob', 'Bob', 'Jones','Recent message');
 
-    expect(getHistory('123')).toEqual([{ username: 'bob', message: 'Recent message' }]);
+    expect(getHistory('123')).toEqual([{ author:'@bob', message: 'Recent message' }]);
 
     // The old message is still stored: it is visible from within its own 24-hour window.
     vi.setSystemTime(now - 1000 * 60 * 60 * 24);
-    expect(getHistory('123')).toContainEqual({ username: 'alice', message: 'Old message' });
+    expect(getHistory('123')).toContainEqual({ author:'@alice', message: 'Old message' });
   });
 });
 

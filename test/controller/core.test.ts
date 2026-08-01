@@ -154,8 +154,8 @@ describe('onMessageReceived', () => {
   it('should generate and send summary on /summary command', async () => {
     mockCtx.update.message.text = '/summary';
     (dataUtils.getHistory as Mock).mockReturnValue([
-      { username: 'user1', message: 'Hello' },
-      { username: 'user2', message: 'World' },
+      { author: '@user1', message: 'Hello' },
+      { author: '@user2', message: 'World' },
     ]);
 
     await onMessageReceived(mockCtx);
@@ -286,7 +286,7 @@ describe('onCronJob', () => {
   it('should send summary to active chats with history', async () => {
     (dataUtils.getActiveChats as Mock).mockReturnValue(['123', '456']);
     (dataUtils.getHistory as Mock).mockReturnValue([
-      { username: 'user1', message: 'Hello' },
+      { author: '@user1', message: 'Hello' },
     ]);
 
     await onCronJob(mockBot);

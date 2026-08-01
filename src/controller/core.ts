@@ -54,7 +54,7 @@ async function generateSummary(chatId: string) {
     { role: 'system', content: "You will receive all messages of a chat and you will have to return a summary of the all conversation." },
     { role: 'system', content: "Use the same language used by the other people. Reply in simple text WITHOUT any special formatting characters (DO NOT use ** or _ please)." },
     // Chat history.
-    ...dataUtils.getHistory(chatId).map(x => ({ role: 'user', content: '@' + x.username + ': ' + x.message }))
+    ...dataUtils.getHistory(chatId).map(x => ({ role: 'user', content: x.author + ': ' + x.message }))
   ]);
 
   // Return the summary.

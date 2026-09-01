@@ -18,11 +18,11 @@
     "@derogab/llm-proxy": "0.4.4",
     "@derogab/stt-proxy": "0.3.3",
     "dotenv": "17.4.2",
-    "grammy": "1.45.1",
+    "grammy": "1.46.0",
     "node-cron": "4.6.0"
   },
   "devDependencies": {
-    "@types/node": "26.1.2",
+    "@types/node": "26.4.0",
     "@vitest/coverage-v8": "4.1.10",
     "typescript": "7.0.2",
     "vitest": "4.1.10"

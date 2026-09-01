@@ -15,7 +15,7 @@
   "author": "derogab",
   "license": "MIT",
   "dependencies": {
-    "@derogab/llm-proxy": "0.4.4",
+    "@derogab/llm-proxy": "0.4.5",
     "@derogab/stt-proxy": "0.3.3",
     "dotenv": "17.4.2",
     "grammy": "1.45.1",
@@ -23,8 +23,8 @@
   },
   "devDependencies": {
     "@types/node": "26.1.2",
-    "@vitest/coverage-v8": "4.1.10",
+    "@vitest/coverage-v8": "4.1.11",
     "typescript": "7.0.2",
-    "vitest": "4.1.10"
+    "vitest": "4.1.11"
   }
 }
